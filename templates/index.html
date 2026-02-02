@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Key Manager Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* 配色系统 */
+            --primary: #4F46E5; /* 靛蓝 */
+            --primary-hover: #4338CA;
+            --bg-body: #F3F4F6;
+            --bg-card: #FFFFFF;
+            --text-main: #111827;
+            --text-sub: #6B7280;
+            --border: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius: 12px;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部导航 */
+        .navbar {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .proxy-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #F9FAFB;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .proxy-input {
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 0.9rem;
+            width: 240px;
+            color: var(--text-main);
+        }
+
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+
+        /* 主体布局 */
+        .main-container {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Tab 切换 */
+        .tab-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            color: var(--text-sub);
+            cursor: pointer;
+            transition: all 0.2s;
+            background: transparent;
+        }
+
+        .tab-btn:hover {
+            background: rgba(79, 70, 229, 0.05);
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            background: var(--bg-card);
+            color: var(--primary);
+            box-shadow: var(--shadow);
+            font-weight: 600;
+        }
+
+        /* 工作区卡片 */
+        .workspace {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            height: calc(100vh - 180px);
+        }
+
+        .workspace.active {
+            display: grid;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #FAFAFA;
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 1rem;
+        }
+
+        .card-body {
+            flex: 1;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            padding: 20px;
+            resize: none;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            outline: none;
+            box-sizing: border-box;
+            background: #fff;
+        }
+        
+        textarea::placeholder { color: #D1D5DB; }
+
+        .log-area {
+            background: #111827;
+            color: #E5E7EB;
+        }
+
+        .card-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+        }
+
+        /* 按钮样式 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+        }
+        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-secondary { background-color: white; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-secondary:hover { background-color: #F9FAFB; border-color: #D1D5DB; }
+
+        .btn-ghost { background: transparent; color: var(--text-sub); padding: 8px; }
+        .btn-ghost:hover { color: var(--error); background: #FEF2F2; }
+
+        /* 状态指示 */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: #E5E7EB;
+            color: #4B5563;
+        }
+
+        /* 进度条 */
+        .progress-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: transparent;
+            z-index: 10;
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--success);
+            width: 0;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        /* 动画 */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .workspace { animation: fadeIn 0.3s ease-out; }
+    </style>
+</head>
+<body>
+
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            AWS Key Manager
+        </div>
+        
+        <div class="proxy-bar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <input type="text" id="globalProxy" class="proxy-input" placeholder="SOCKS5 代理 (如 127.0.0.1:7890)">
+            <button class="btn btn-secondary btn-sm" onclick="checkProxy()">检测</button>
+            <span id="proxyStatus" style="font-size: 0.8rem; font-weight: 500; min-width: 80px; text-align: center;"></span>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <!-- Tab 切换 -->
+        <div class="tab-nav">
+            <div class="tab-btn active" onclick="switchTab('rotate')">🔄 密钥轮换</div>
+            <div class="tab-btn" onclick="switchTab('verify')">✅ 密钥验证</div>
+        </div>
+
+        <!-- 轮换工作区 -->
+        <div id="tab-rotate" class="workspace active">
+            <!-- 输入卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">旧密钥列表</span>
+                    <span class="badge" id="rotateLines">0 行</span>
+                </div>
+                <div class="card-body">
+                    <textarea id="rotateInput" placeholder="在此粘贴密钥列表...&#10;格式支持：&#10;user@example.com AKIA... SECRET...&#10;备注信息 AKIA... SECRET..."></textarea>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-ghost" onclick="clearInput('rotate')">清空</button>
+                    <button class="btn btn-primary" onclick="startTask('rotate')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        开始轮换
+                    </button>
+                </div>
+            </div>
+
+            <!-- 输出卡片 -->
+            <div class="card">
+                <div class="progress-container"><div id="rotateProgress" class="progress-bar"></div></div>
+                <div class="card-header">
+                    <span class="card-title">新密钥结果</span>
+                    <span class="badge" style="background: #D1FAE5; color: #065F46;" id="rotateCount">成功: 0</span>
+                </div>
+                <div class="card-body">
+                    <textarea id="rotateOutput" class="log-area" readonly placeholder="等待任务开始..."></textarea>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-secondary" onclick="downloadOutput('rotateOutput', 'new_keys.txt')">导出 TXT</button>
+                    <button class="btn btn-primary" style="background: var(--success);" onclick="copyOutput('rotateOutput')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        一键复制
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 验证工作区 -->
+        <div id="tab-verify" class="workspace">
+            <!-- 输入卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">待验证列表</span>
+                    <span class="badge" id="verifyLines">0 行</span>
+                </div>
+                <div class="card-body">
+                    <textarea id="verifyInput" placeholder="在此粘贴需要验证的密钥列表..."></textarea>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-ghost" onclick="clearInput('verify')">清空</button>
+                    <button class="btn btn-primary" onclick="startTask('verify')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        开始验证
+                    </button>
+                </div>
+            </div>
+
+            <!-- 输出卡片 -->
+            <div class="card">
+                <div class="progress-container"><div id="verifyProgress" class="progress-bar"></div></div>
+                <div class="card-header">
+                    <span class="card-title">验证报告</span>
+                    <span class="badge" style="background: #DBEAFE; color: #1E40AF;" id="verifyCount">有效: 0</span>
+                </div>
+                <div class="card-body">
+                    <textarea id="verifyOutput" class="log-area" readonly placeholder="等待任务开始..."></textarea>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-secondary" onclick="downloadOutput('verifyOutput', 'valid_keys.txt')">导出 TXT</button>
+                    <button class="btn btn-primary" style="background: var(--success);" onclick="copyOutput('verifyOutput')">一键复制</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 逻辑保持不变，只是适配了新的 ID
+        function switchTab(tabName) {
+            document.querySelectorAll('.workspace').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            // Find the clicked button (event target might be child)
+            const btns = document.querySelectorAll('.tab-btn');
+            if (tabName === 'rotate') btns[0].classList.add('active');
+            else btns[1].classList.add('active');
+        }
+
+        const proxyInput = document.getElementById('globalProxy');
+
+        ['rotate', 'verify'].forEach(type => {
+            const input = document.getElementById(type + 'Input');
+            const counter = document.getElementById(type + 'Lines');
+            input.addEventListener('input', () => {
+                const lines = input.value.trim().split('\n').filter(l => l.trim());
+                counter.textContent = `${lines.length} 行`;
+            });
+        });
+        
+        function clearInput(type) {
+             document.getElementById(type + 'Input').value = "";
+             document.getElementById(type + 'Lines').textContent = "0 行";
+        }
+
+        async function checkProxy() {
+            const proxy = proxyInput.value;
+            const statusSpan = document.getElementById('proxyStatus');
+            
+            if (!proxy) {
+                 statusSpan.textContent = "直连模式";
+                 statusSpan.style.color = "#9CA3AF";
+                 return;
+            }
+            
+            statusSpan.textContent = "检测中...";
+            statusSpan.style.color = "#6B7280";
+            
+            try {
+                const response = await fetch('/api/check_proxy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ proxy: proxy })
+                });
+                const res = await response.json();
+                
+                if (res.success) {
+                    statusSpan.textContent = `✅ ${res.ip}`;
+                    statusSpan.style.color = "#10B981";
+                } else {
+                    statusSpan.textContent = `❌ 失败`;
+                    statusSpan.title = res.msg;
+                    statusSpan.style.color = "#EF4444";
+                }
+            } catch (e) {
+                statusSpan.textContent = `❌ 错误`;
+                statusSpan.style.color = "#EF4444";
+            }
+        }
+
+        async function startTask(type) {
+            const inputArea = document.getElementById(type + 'Input');
+            const outputArea = document.getElementById(type + 'Output');
+            const progressFill = document.getElementById(type + 'Progress');
+            const countText = document.getElementById(type + 'Count');
+            
+            // Disable button (simple way)
+            const startBtns = document.querySelectorAll('button');
+            
+            const lines = inputArea.value.trim().split('\n').filter(l => l.trim());
+            if (lines.length === 0) { alert("请先输入内容！"); return; }
+
+            outputArea.value = "";
+            let successCount = 0;
+            let processed = 0;
+            const total = lines.length;
+            const apiUrl = type === 'rotate' ? '/api/rotate' : '/api/verify';
+
+            progressFill.style.width = "0%";
+
+            for (const line of lines) {
+                processed++;
+                progressFill.style.width = `${(processed / total) * 100}%`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ proxy: proxyInput.value, line: line })
+                    });
+                    const res = await response.json();
+
+                    if (res.success) {
+                        successCount++;
+                        if (type === 'rotate') {
+                            outputArea.value += res.output_line + "\n";
+                        } else {
+                            outputArea.value += `[有效] ${res.remark} | ${res.ak} | ${res.msg}\n`;
+                        }
+                    } else {
+                         outputArea.value += `[失败] ${line.substring(0, 30)}... | ${res.msg}\n`;
+                    }
+                } catch (e) {
+                    outputArea.value += `[错误] 系统异常: ${e.message}\n`;
+                }
+                outputArea.scrollTop = outputArea.scrollHeight;
+                
+                const label = type === 'rotate' ? '成功' : '有效';
+                countText.textContent = `${label}: ${successCount}/${total}`;
+            }
+        }
+
+        function copyOutput(id) {
+            document.getElementById(id).select();
+            document.execCommand('copy');
+            alert("已复制！");
+        }
+
+        function downloadOutput(id, filename) {
+            const val = document.getElementById(id).value;
+            const blob = new Blob([val], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
