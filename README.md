@@ -17,7 +17,15 @@
 
 ## 🚀 快速部署
 
-### 方法 1: 使用一键脚本 (推荐)
+### ⚡️ 一键安装 (One-Line Command)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/obace/aws-key-manager/main/setup.sh | bash
+```
+
+*(注意：如果是私有仓库，请确保您有权访问 raw 文件，或者使用带 Token 的 curl 命令)*
+
+### 方法 2: 手动 clone
 
 如果您已经将此仓库 Clone 到本地或服务器：
 
