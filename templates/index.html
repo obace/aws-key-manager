@@ -108,6 +108,7 @@
                 <input type="text" id="globalProxy" class="proxy-input" placeholder="SOCKS5 代理地址">
                 <span class="proxy-mode-label" id="proxyModeLabel">直连模式</span>
                 <button class="btn btn-secondary btn-sm" onclick="checkProxy()">检测</button>
+                <button class="btn btn-secondary btn-sm" onclick="saveProxy()" title="保存到浏览器">💾</button>
                 <span id="proxyStatus" style="font-size:0.75rem;font-weight:500;min-width:70px;text-align:center;"></span>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="showPwdModal()" title="修改密码">🔒</button>
@@ -183,6 +184,10 @@
     </div>
 <script>
     let proxyIndex=0, rotateResults=[], verifyResults=[];
+
+    // 页面加载时恢复代理
+    (function(){const saved=localStorage.getItem('akm_proxy');if(saved){document.getElementById('globalProxy').value=saved;updateProxyLabel();}})();
+    function saveProxy(){localStorage.setItem('akm_proxy',document.getElementById('globalProxy').value);alert('已保存');}
 
     function showPwdModal(){document.getElementById('pwdModal').style.display='flex';document.getElementById('oldPwd').focus();}
     function hidePwdModal(){document.getElementById('pwdModal').style.display='none';['oldPwd','newPwd','newPwd2'].forEach(id=>document.getElementById(id).value='');document.getElementById('pwdMsg').textContent='';}
