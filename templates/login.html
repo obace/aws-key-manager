@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Key Manager - Login</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%237c3aed'/><stop offset='100%25' stop-color='%2306b6d4'/></linearGradient></defs><circle cx='32' cy='24' r='10' fill='none' stroke='url(%23g)' stroke-width='4'/><rect x='28' y='34' width='8' height='20' rx='4' fill='url(%23g)'/><circle cx='20' cy='50' r='5' fill='none' stroke='url(%23g)' stroke-width='3'/><circle cx='44' cy='44' r='5' fill='none' stroke='url(%23g)' stroke-width='3'/></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'SF Pro Display', -apple-system, sans-serif;
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            overflow: hidden;
+        }
+        body::before, body::after {
+            content: ''; position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none;
+        }
+        body::before { width: 500px; height: 500px; background: rgba(99,102,241,0.18); top: -150px; left: -100px; }
+        body::after { width: 400px; height: 400px; background: rgba(236,72,153,0.12); bottom: -100px; right: -50px; }
+
+        .login-card {
+            position: relative; z-index: 1; width: 380px; padding: 48px 36px;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            box-shadow: 0 16px 64px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .logo {
+            width: 80px; height: 80px; margin: 0 auto 20px;
+        }
+        .title { font-size: 1.4rem; font-weight: 700; color: #c4b5fd; margin-bottom: 6px; letter-spacing: 0.5px; }
+        .subtitle { font-size: 0.82rem; color: rgba(255,255,255,0.3); margin-bottom: 36px; }
+
+        .input-wrap {
+            position: relative; margin-bottom: 24px;
+        }
+        .input-wrap input {
+            width: 100%; padding: 14px 18px; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; background: rgba(255,255,255,0.04);
+            color: #e0e0e0; font-size: 0.95rem; outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .input-wrap input::placeholder { color: rgba(255,255,255,0.2); }
+        .input-wrap input:focus {
+            border-color: rgba(124,58,237,0.5);
+            box-shadow: 0 0 20px rgba(124,58,237,0.15);
+        }
+
+        .login-btn {
+            width: 100%; padding: 14px; border: none; border-radius: 12px;
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            color: white; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+        }
+        .login-btn:hover { box-shadow: 0 8px 30px rgba(99,102,241,0.5); transform: translateY(-2px); }
+        .login-btn:active { transform: translateY(0); }
+
+        .error-msg {
+            margin-top: 16px; font-size: 0.82rem; color: #f87171;
+            min-height: 20px; transition: opacity 0.3s;
+        }
+
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            20%,60% { transform: translateX(-8px); }
+            40%,80% { transform: translateX(8px); }
+        }
+        .shake { animation: shake 0.4s ease; }
+    </style>
+</head>
+<body>
+    <div class="login-card" id="card">
+        <svg class="logo" viewBox="0 0 64 64" fill="none">
+            <defs><linearGradient id="lg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+            <circle cx="32" cy="24" r="10" stroke="url(#lg)" stroke-width="4"/>
+            <rect x="28" y="34" width="8" height="20" rx="4" fill="url(#lg)"/>
+            <circle cx="20" cy="50" r="5" stroke="url(#lg)" stroke-width="3" fill="none"/>
+            <circle cx="44" cy="44" r="5" stroke="url(#lg)" stroke-width="3" fill="none"/>
+        </svg>
+        <div class="title">AWS Key Manager</div>
+        <div class="subtitle">请输入密码以继续</div>
+        <div class="input-wrap">
+            <input type="password" id="pwd" placeholder="访问密码" autofocus>
+        </div>
+        <button class="login-btn" onclick="doLogin()">进 入</button>
+        <div class="error-msg" id="err"></div>
+    </div>
+<script>
+    document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    async function doLogin() {
+        const pwd = document.getElementById('pwd').value;
+        if (!pwd) return;
+        try {
+            const r = await fetch('/api/login', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({password: pwd})
+            }).then(r => r.json());
+            if (r.success) {
+                window.location.href = '/dashboard';
+            } else {
+                document.getElementById('err').textContent = r.msg;
+                const card = document.getElementById('card');
+                card.classList.remove('shake');
+                void card.offsetWidth;
+                card.classList.add('shake');
+            }
+        } catch(e) { document.getElementById('err').textContent = '网络错误'; }
+    }
+</script>
+</body>
+</html>

@@ -5,12 +5,14 @@ import socks
 import socket
 import boto3
 import threading
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from botocore.exceptions import ClientError
 from botocore.config import Config as BotoConfig
 import urllib.request
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)
+LOGIN_PASSWORD = os.environ.get("AKM_PASSWORD", "admin888")
 
 _original_socket = socket.socket
 _proxy_lock = threading.Lock()
@@ -195,12 +197,37 @@ def rotate_single_key(ak, sk, proxy_url=None, remark=""):
 
 
 @app.route("/")
-def index():
+def login_page():
+    if session.get("logged_in"):
+        return redirect("/dashboard")
+    return render_template("login.html")
+
+
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    if request.json.get("password") == LOGIN_PASSWORD:
+        session["logged_in"] = True
+        return jsonify({"success": True})
+    return jsonify({"success": False, "msg": "密码错误"})
+
+
+@app.route("/dashboard")
+def dashboard():
+    if not session.get("logged_in"):
+        return redirect("/")
     return render_template("index.html")
+
+
+def _require_login():
+    if not session.get("logged_in"):
+        return jsonify({"success": False, "msg": "未登录"}), 401
+    return None
 
 
 @app.route("/api/rotate", methods=["POST"])
 def api_rotate():
+    err = _require_login()
+    if err: return err
     data = request.json
     proxy = data.get("proxy")
     line = data.get("line", "")
@@ -223,6 +250,8 @@ def api_rotate():
 
 @app.route("/api/verify", methods=["POST"])
 def api_verify():
+    err = _require_login()
+    if err: return err
     data = request.json
     proxy = data.get("proxy")
     line = data.get("line", "")
@@ -253,6 +282,8 @@ def api_verify():
 
 @app.route("/api/check_proxy", methods=["POST"])
 def api_check_proxy():
+    err = _require_login()
+    if err: return err
     data = request.json
     proxy = data.get("proxy")
     try:
