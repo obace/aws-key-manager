@@ -224,7 +224,6 @@
             try{
                 const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proxy:getNextProxy(),line:lines[i]})}).then(r=>r.json());
 
-                // 输出后端日志
                 if(r.logs){r.logs.forEach(l=>appendLog(type,l,l.includes('❌')));}
 
                 if(r.success){ok++;
@@ -234,7 +233,6 @@
                     }else{
                         output.value+=`${r.remark} | ${r.ak} | ${r.sk} | ${r.msg}\n`;
                         verifyResults.push({remark:r.remark,ak:r.ak,sk:r.sk,arn:r.arn||'',msg:r.msg});
-                        appendLog(type,`✅ ${r.msg}`);
                     }
                 }else{
                     output.value+=`[失败] ${lines[i].substring(0,30)}... | ${r.msg}\n`;

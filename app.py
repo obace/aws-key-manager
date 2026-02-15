@@ -80,6 +80,15 @@ def reconnect_proxy(proxy_url):
         log_info(f"代理已重连: {proxy_url}")
 
 
+def _detect_exit_ip():
+    """探测当前出口 IP"""
+    try:
+        with urllib.request.urlopen("http://checkip.amazonaws.com", timeout=8) as resp:
+            return resp.read().decode().strip()
+    except Exception:
+        return "未知"
+
+
 def _new_session(ak, sk):
     """创建一个不复用连接的 boto3 session"""
     return boto3.Session(aws_access_key_id=ak, aws_secret_access_key=sk)
@@ -129,9 +138,15 @@ def rotate_single_key(ak, sk, proxy_url=None, remark=""):
 
     try:
         if proxy_url:
-            _log("🔄 重连代理，切换出口 IP...")
+            _log("🔌 断开旧连接...")
+            _log(f"🔄 重连 SOCKS5: {proxy_url}")
             reconnect_proxy(proxy_url)
+            ip = _detect_exit_ip()
+            _log(f"🌐 出口 IP: {ip}")
+        else:
+            _log("🌐 直连模式（无代理）")
 
+        _log(f"📡 开始处理...")
         session = _new_session(ak, sk)
 
         # 验证旧密钥
@@ -282,24 +297,36 @@ def api_verify():
 
     ak, sk, remark = parse_key_line(line)
     if not ak or not sk:
-        return jsonify({"success": False, "msg": "格式错误", "raw": line})
+        return jsonify({"success": False, "msg": "格式错误", "raw": line, "logs": []})
 
+    vlogs = []
     try:
         if proxy:
+            vlogs.append("🔌 断开旧连接...")
+            vlogs.append(f"🔄 重连 SOCKS5: {proxy}")
             reconnect_proxy(proxy)
+            ip = _detect_exit_ip()
+            vlogs.append(f"🌐 出口 IP: {ip}")
+        else:
+            vlogs.append("🌐 直连模式（无代理）")
+
+        vlogs.append(f"🔑 验证密钥 {ak[:8]}****...")
         session = _new_session(ak, sk)
         identity = _call_with_retry(
             lambda: session.client("sts", config=_boto_config).get_caller_identity(),
             proxy
         )
+        vlogs.append(f"✅ 有效 — Account: {identity['Account']}")
+        vlogs.append(f"   ARN: {identity['Arn']}")
         return jsonify({
-            "success": True,
+            "success": True, "logs": vlogs,
             "msg": f"有效 (Account: {identity['Account']})",
             "remark": remark, "ak": ak, "sk": sk, "arn": identity["Arn"],
         })
     except Exception as e:
+        vlogs.append(f"❌ 无效: {e}")
         return jsonify({
-            "success": False, "msg": f"无效 ({e})",
+            "success": False, "msg": f"无效 ({e})", "logs": vlogs,
             "remark": remark, "ak": ak, "sk": sk,
         })
 
