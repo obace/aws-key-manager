@@ -14,6 +14,21 @@ app = Flask(__name__)
 _original_socket = socket.socket
 _proxy_lock = threading.Lock()
 
+# 密钥备份文件：每次生成新密钥立刻写入，防止响应丢失导致密钥丢失
+BACKUP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "keys_backup.csv")
+
+
+def _backup_key(remark, old_ak, new_ak, new_sk, msg):
+    """新密钥创建后立刻写入本地文件，确保不丢失"""
+    try:
+        write_header = not os.path.exists(BACKUP_FILE)
+        with open(BACKUP_FILE, "a", encoding="utf-8") as f:
+            if write_header:
+                f.write("time,remark,old_ak,new_ak,new_sk,status\n")
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')},{remark},{old_ak},{new_ak},{new_sk},{msg}\n")
+    except Exception as e:
+        log_error(f"备份写入失败: {e}")
+
 # boto3 连接配置：短超时 + 不复用连接，确保每次请求都走新的 TCP 连接（触发代理换 IP）
 _boto_config = BotoConfig(
     connect_timeout=10,
@@ -103,7 +118,7 @@ def parse_key_line(line):
     return ak, sk, remark
 
 
-def rotate_single_key(ak, sk, proxy_url=None):
+def rotate_single_key(ak, sk, proxy_url=None, remark=""):
     """核心轮换逻辑，返回 (success, msg, new_ak, new_sk)"""
     try:
         # 每个 key 操作前重连代理，触发换 IP
@@ -143,6 +158,8 @@ def rotate_single_key(ak, sk, proxy_url=None):
             new_ak = created["AccessKey"]["AccessKeyId"]
             new_sk = created["AccessKey"]["SecretAccessKey"]
             log_info(f"新密钥创建成功: {new_ak}")
+            # 立刻备份到本地文件，后续即使代理断了、响应丢了，密钥也不会丢
+            _backup_key(remark, ak, new_ak, new_sk, "created")
         except Exception as e:
             return False, f"创建新密钥失败: {e}", None, None
 
@@ -194,7 +211,7 @@ def api_rotate():
     if not ak or not sk:
         return jsonify({"success": False, "msg": "无法识别密钥格式", "raw": line})
 
-    success, msg, new_ak, new_sk = rotate_single_key(ak, sk, proxy)
+    success, msg, new_ak, new_sk = rotate_single_key(ak, sk, proxy, remark)
 
     result = {
         "success": success, "msg": msg,
@@ -247,6 +264,15 @@ def api_check_proxy():
         return jsonify({"success": True, "ip": ip})
     except Exception as e:
         return jsonify({"success": False, "msg": str(e)})
+
+
+@app.route("/api/backup")
+def api_backup():
+    """下载本地密钥备份文件"""
+    if os.path.exists(BACKUP_FILE):
+        from flask import send_file
+        return send_file(BACKUP_FILE, as_attachment=True, download_name="keys_backup.csv")
+    return jsonify({"success": False, "msg": "暂无备份记录"})
 
 
 if __name__ == "__main__":
