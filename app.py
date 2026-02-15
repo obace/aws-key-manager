@@ -25,7 +25,8 @@ def _backup_key(remark, old_ak, new_ak, new_sk, msg):
     """新密钥创建后立刻写入本地文件，确保不丢失"""
     try:
         with open(BACKUP_FILE, "a", encoding="utf-8") as f:
-            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} | {remark} | {old_ak} -> {new_ak} {new_sk} | {msg}\n")
+            parts = [remark, new_ak, new_sk] if remark else [new_ak, new_sk]
+            f.write(" | ".join(parts) + "\n")
     except Exception as e:
         log_error(f"备份写入失败: {e}")
 
