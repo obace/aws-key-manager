@@ -1,5 +1,4 @@
 import re
-import os
 import time
 import socks
 import socket
@@ -7,14 +6,25 @@ import boto3
 import threading
 from flask import Flask, render_template, request, jsonify
 from botocore.exceptions import ClientError
+from botocore.config import Config as BotoConfig
 import urllib.request
 
 app = Flask(__name__)
 
-# 保存原始 socket
 _original_socket = socket.socket
-# 线程锁，防止并发修改全局 socket
 _proxy_lock = threading.Lock()
+
+# boto3 连接配置：短超时 + 不复用连接，确保每次请求都走新的 TCP 连接（触发代理换 IP）
+_boto_config = BotoConfig(
+    connect_timeout=10,
+    read_timeout=15,
+    retries={"max_attempts": 0},  # 我们自己控制重试
+    max_pool_connections=1,
+)
+
+# 操作级别重试次数（应对不稳定代理）
+MAX_RETRIES = 3
+RETRY_DELAY = 2
 
 
 def log_info(msg):
@@ -25,86 +35,96 @@ def log_error(msg):
     print(f"\033[91m[ERROR] {msg}\033[0m")
 
 
-def _make_proxy_socket(proxy_url):
-    """解析代理地址，返回配置好的 socks socket 类，不修改全局状态"""
+def _parse_proxy(proxy_url):
+    """解析代理地址，返回 (host, port, username, password)"""
     target = proxy_url.strip()
     if "://" in target:
         _, target = target.split("://", 1)
-
     username = password = None
     if "@" in target:
         auth, endpoint = target.rsplit("@", 1)
         username, password = auth.split(":", 1)
     else:
         endpoint = target
-
     host, port = endpoint.rsplit(":", 1)
-    port = int(port)
-
-    s = socks.socksocket()
-    socks.set_default_proxy(socks.SOCKS5, host, port, True, username, password)
-    return host, port, username, password
+    return host, int(port), username, password
 
 
-def setup_proxy(proxy_url):
-    """设置全局 SOCKS5 代理"""
+def reconnect_proxy(proxy_url):
+    """强制重连代理（断开旧连接，建立新连接触发换 IP）"""
     with _proxy_lock:
+        # 先恢复原始 socket，断开所有 socks 连接
+        socket.socket = _original_socket
         if not proxy_url or not proxy_url.strip():
-            socket.socket = _original_socket
             return
-        _make_proxy_socket(proxy_url)
+        # 重新设置代理，下次建连时会走新的 TCP 连接 = 新出口 IP
+        host, port, username, password = _parse_proxy(proxy_url)
+        socks.set_default_proxy(socks.SOCKS5, host, port, True, username, password)
         socket.socket = socks.socksocket
-        log_info(f"代理已启用: {proxy_url}")
+        log_info(f"代理已重连: {proxy_url}")
 
 
-def _create_session_with_proxy(ak, sk, proxy_url):
-    """创建 boto3 session，如有代理则先设置"""
-    if proxy_url:
-        setup_proxy(proxy_url)
+def _new_session(ak, sk):
+    """创建一个不复用连接的 boto3 session"""
     return boto3.Session(aws_access_key_id=ak, aws_secret_access_key=sk)
+
+
+def _call_with_retry(fn, proxy_url, retries=MAX_RETRIES):
+    """带重试的调用包装，每次失败后重连代理"""
+    last_err = None
+    for i in range(retries):
+        try:
+            return fn()
+        except Exception as e:
+            last_err = e
+            log_error(f"操作失败 (第 {i+1}/{retries} 次): {e}")
+            if i < retries - 1:
+                time.sleep(RETRY_DELAY)
+                if proxy_url:
+                    reconnect_proxy(proxy_url)
+    raise last_err
 
 
 def parse_key_line(line):
     """从一行文本中解析 AK、SK 和备注"""
     ak_match = re.search(r"(AKIA[A-Z0-9]{16})", line)
-    # SK 必须是 40 位且包含至少一个非十六进制字符（排除纯 hex hash）
     sk_match = re.search(r"(?<![A-Za-z0-9/+=])([A-Za-z0-9/+=]{40})(?![A-Za-z0-9/+=])", line)
-
     if not ak_match or not sk_match:
         return None, None, ""
+    ak, sk = ak_match.group(1), sk_match.group(1)
 
-    ak = ak_match.group(1)
-    sk = sk_match.group(1)
-
-    # 提取备注：优先邮箱
     email_match = re.search(r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", line)
     if email_match:
         remark = email_match.group(1)
     else:
-        remark = line.replace(ak, "").replace(sk, "").strip()
-        remark = re.sub(r"[-=,;:\s|]+", " ", remark).strip()
+        remark = re.sub(r"[-=,;:\s|]+", " ", line.replace(ak, "").replace(sk, "")).strip()
         parts = remark.split()
         remark = parts[0] if parts else ""
-
     return ak, sk, remark
 
 
 def rotate_single_key(ak, sk, proxy_url=None):
     """核心轮换逻辑，返回 (success, msg, new_ak, new_sk)"""
     try:
-        session = _create_session_with_proxy(ak, sk, proxy_url)
+        # 每个 key 操作前重连代理，触发换 IP
+        if proxy_url:
+            reconnect_proxy(proxy_url)
 
-        # 验证旧密钥
+        session = _new_session(ak, sk)
+
+        # 验证旧密钥（带重试）
         try:
-            sts = session.client("sts")
-            identity = sts.get_caller_identity()
+            identity = _call_with_retry(
+                lambda: session.client("sts", config=_boto_config).get_caller_identity(),
+                proxy_url
+            )
             log_info(f"验证通过: {identity.get('Arn')}")
-        except ClientError as e:
+        except Exception as e:
             return False, f"旧密钥无效: {e}", None, None
 
-        iam = session.client("iam")
+        iam = session.client("iam", config=_boto_config)
 
-        # 清理多余密钥（AWS 限制每用户最多 2 个）
+        # 清理多余密钥
         try:
             existing = []
             for page in iam.get_paginator("list_access_keys").paginate():
@@ -119,19 +139,20 @@ def rotate_single_key(ak, sk, proxy_url=None):
 
         # 创建新密钥
         try:
-            created = iam.create_access_key()
+            created = _call_with_retry(lambda: iam.create_access_key(), proxy_url)
             new_ak = created["AccessKey"]["AccessKeyId"]
             new_sk = created["AccessKey"]["SecretAccessKey"]
             log_info(f"新密钥创建成功: {new_ak}")
-        except ClientError as e:
+        except Exception as e:
             return False, f"创建新密钥失败: {e}", None, None
 
         # 等待新密钥生效
         new_key_active = False
+        new_session = None
         for i in range(10):
             try:
-                new_session = _create_session_with_proxy(new_ak, new_sk, proxy_url)
-                new_session.client("sts").get_caller_identity()
+                new_session = _new_session(new_ak, new_sk)
+                new_session.client("sts", config=_boto_config).get_caller_identity()
                 new_key_active = True
                 log_info(f"新密钥验证成功 (第 {i+1} 次)")
                 break
@@ -141,9 +162,9 @@ def rotate_single_key(ak, sk, proxy_url=None):
         if not new_key_active:
             return True, "新密钥验证超时，未删除旧密钥，请手动检查", new_ak, new_sk
 
-        # 删除旧密钥：优先用新密钥删，失败则用旧密钥自删
+        # 删除旧密钥
         deleted = False
-        for client in [new_session.client("iam"), iam]:
+        for client in [new_session.client("iam", config=_boto_config), iam]:
             try:
                 client.delete_access_key(AccessKeyId=ak)
                 deleted = True
@@ -169,12 +190,6 @@ def api_rotate():
     proxy = data.get("proxy")
     line = data.get("line", "")
 
-    if proxy:
-        try:
-            setup_proxy(proxy)
-        except Exception as e:
-            return jsonify({"success": False, "msg": f"代理错误: {e}", "raw": line})
-
     ak, sk, remark = parse_key_line(line)
     if not ak or not sk:
         return jsonify({"success": False, "msg": "无法识别密钥格式", "raw": line})
@@ -188,7 +203,6 @@ def api_rotate():
     if success:
         parts = [remark, new_ak, new_sk] if remark else [new_ak, new_sk]
         result["output_line"] = " ".join(parts)
-
     return jsonify(result)
 
 
@@ -198,19 +212,18 @@ def api_verify():
     proxy = data.get("proxy")
     line = data.get("line", "")
 
-    if proxy:
-        try:
-            setup_proxy(proxy)
-        except Exception as e:
-            return jsonify({"success": False, "msg": f"代理错误: {e}", "raw": line})
-
     ak, sk, remark = parse_key_line(line)
     if not ak or not sk:
         return jsonify({"success": False, "msg": "格式错误", "raw": line})
 
     try:
-        session = _create_session_with_proxy(ak, sk, proxy)
-        identity = session.client("sts").get_caller_identity()
+        if proxy:
+            reconnect_proxy(proxy)
+        session = _new_session(ak, sk)
+        identity = _call_with_retry(
+            lambda: session.client("sts", config=_boto_config).get_caller_identity(),
+            proxy
+        )
         return jsonify({
             "success": True,
             "msg": f"有效 (Account: {identity['Account']})",
@@ -228,7 +241,7 @@ def api_check_proxy():
     data = request.json
     proxy = data.get("proxy")
     try:
-        setup_proxy(proxy)
+        reconnect_proxy(proxy)
         with urllib.request.urlopen("http://checkip.amazonaws.com", timeout=10) as resp:
             ip = resp.read().decode().strip()
         return jsonify({"success": True, "ip": ip})
