@@ -33,7 +33,7 @@ def _backup_key(remark, old_ak, new_ak, new_sk, msg):
 # boto3 连接配置：短超时 + 不复用连接，确保每次请求都走新的 TCP 连接（触发代理换 IP）
 _boto_config = BotoConfig(
     connect_timeout=10,
-    read_timeout=15,
+    read_timeout=20,
     retries={"max_attempts": 0},  # 我们自己控制重试
     max_pool_connections=1,
 )
@@ -166,16 +166,20 @@ def rotate_single_key(ak, sk, proxy_url=None, remark=""):
         # 清理多余密钥
         _log("🔍 检查现有密钥数量...")
         try:
-            existing = []
-            for page in iam.get_paginator("list_access_keys").paginate():
-                existing.extend(k["AccessKeyId"] for k in page["AccessKeyMetadata"])
-            _log(f"   当前密钥数: {len(existing)}")
-            if len(existing) >= 2:
-                for kid in existing:
-                    if kid != ak:
-                        _log(f"🗑️ 删除闲置密钥: {kid}")
-                        iam.delete_access_key(AccessKeyId=kid)
-        except ClientError as e:
+            def _list_and_clean():
+                _iam = session.client("iam", config=_boto_config)
+                existing = []
+                for page in _iam.get_paginator("list_access_keys").paginate():
+                    existing.extend(k["AccessKeyId"] for k in page["AccessKeyMetadata"])
+                _log(f"   当前密钥数: {len(existing)}")
+                if len(existing) >= 2:
+                    for kid in existing:
+                        if kid != ak:
+                            _log(f"🗑️ 删除闲置密钥: {kid}")
+                            _iam.delete_access_key(AccessKeyId=kid)
+                return _iam
+            iam = _call_with_retry(_list_and_clean, proxy_url)
+        except Exception as e:
             _log(f"❌ 清理失败: {e}")
             return False, f"清理旧密钥失败: {e}", None, None, logs
 
@@ -214,13 +218,20 @@ def rotate_single_key(ak, sk, proxy_url=None, remark=""):
         # 删除旧密钥
         _log(f"🗑️ 删除旧密钥 {ak}...")
         deleted = False
-        for client in [new_session.client("iam", config=_boto_config), iam]:
-            try:
-                client.delete_access_key(AccessKeyId=ak)
-                deleted = True
+        for attempt in range(MAX_RETRIES):
+            for make_client in [lambda: new_session.client("iam", config=_boto_config), lambda: session.client("iam", config=_boto_config)]:
+                try:
+                    make_client().delete_access_key(AccessKeyId=ak)
+                    deleted = True
+                    break
+                except Exception:
+                    continue
+            if deleted:
                 break
-            except Exception:
-                continue
+            _log(f"   删除失败，重连代理重试 ({attempt+1}/{MAX_RETRIES})...")
+            if proxy_url:
+                reconnect_proxy(proxy_url)
+            time.sleep(RETRY_DELAY)
 
         if deleted:
             _log("✅ 旧密钥已删除，轮换完成")
