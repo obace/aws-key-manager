@@ -13,6 +13,17 @@ import urllib.request
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 LOGIN_PASSWORD = os.environ.get("AKM_PASSWORD", "admin888")
+_password_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".password")
+
+def _get_password():
+    if os.path.exists(_password_file):
+        with open(_password_file, "r") as f:
+            return f.read().strip()
+    return LOGIN_PASSWORD
+
+def _set_password(pwd):
+    with open(_password_file, "w") as f:
+        f.write(pwd)
 
 _original_socket = socket.socket
 _proxy_lock = threading.Lock()
@@ -255,7 +266,7 @@ def login_page():
 
 @app.route("/api/login", methods=["POST"])
 def api_login():
-    if request.json.get("password") == LOGIN_PASSWORD:
+    if request.json.get("password") == _get_password():
         session["logged_in"] = True
         return jsonify({"success": True})
     return jsonify({"success": False, "msg": "密码错误"})
@@ -272,6 +283,21 @@ def _require_login():
     if not session.get("logged_in"):
         return jsonify({"success": False, "msg": "未登录"}), 401
     return None
+
+
+@app.route("/api/change_password", methods=["POST"])
+def api_change_password():
+    err = _require_login()
+    if err: return err
+    data = request.json
+    old_pwd = data.get("old_password", "")
+    new_pwd = data.get("new_password", "")
+    if old_pwd != _get_password():
+        return jsonify({"success": False, "msg": "旧密码错误"})
+    if len(new_pwd) < 4:
+        return jsonify({"success": False, "msg": "新密码至少 4 位"})
+    _set_password(new_pwd)
+    return jsonify({"success": True, "msg": "密码已修改"})
 
 
 @app.route("/api/rotate", methods=["POST"])
