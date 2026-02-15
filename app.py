@@ -119,51 +119,65 @@ def parse_key_line(line):
 
 
 def rotate_single_key(ak, sk, proxy_url=None, remark=""):
-    """核心轮换逻辑，返回 (success, msg, new_ak, new_sk)"""
+    """核心轮换逻辑，返回 (success, msg, new_ak, new_sk, logs)"""
+    logs = []
+
+    def _log(s):
+        logs.append(s)
+        log_info(s)
+
     try:
-        # 每个 key 操作前重连代理，触发换 IP
         if proxy_url:
+            _log("🔄 重连代理，切换出口 IP...")
             reconnect_proxy(proxy_url)
 
         session = _new_session(ak, sk)
 
-        # 验证旧密钥（带重试）
+        # 验证旧密钥
+        _log(f"🔑 验证旧密钥 {ak[:8]}****...")
         try:
             identity = _call_with_retry(
                 lambda: session.client("sts", config=_boto_config).get_caller_identity(),
                 proxy_url
             )
-            log_info(f"验证通过: {identity.get('Arn')}")
+            _log(f"✅ 验证通过: {identity.get('Arn')}")
         except Exception as e:
-            return False, f"旧密钥无效: {e}", None, None
+            _log(f"❌ 旧密钥无效: {e}")
+            return False, f"旧密钥无效: {e}", None, None, logs
 
         iam = session.client("iam", config=_boto_config)
 
         # 清理多余密钥
+        _log("🔍 检查现有密钥数量...")
         try:
             existing = []
             for page in iam.get_paginator("list_access_keys").paginate():
                 existing.extend(k["AccessKeyId"] for k in page["AccessKeyMetadata"])
+            _log(f"   当前密钥数: {len(existing)}")
             if len(existing) >= 2:
                 for kid in existing:
                     if kid != ak:
-                        log_info(f"删除闲置密钥: {kid}")
+                        _log(f"🗑️ 删除闲置密钥: {kid}")
                         iam.delete_access_key(AccessKeyId=kid)
         except ClientError as e:
-            return False, f"清理旧密钥失败: {e}", None, None
+            _log(f"❌ 清理失败: {e}")
+            return False, f"清理旧密钥失败: {e}", None, None, logs
 
         # 创建新密钥
+        _log("🆕 创建新密钥...")
         try:
             created = _call_with_retry(lambda: iam.create_access_key(), proxy_url)
             new_ak = created["AccessKey"]["AccessKeyId"]
             new_sk = created["AccessKey"]["SecretAccessKey"]
-            log_info(f"新密钥创建成功: {new_ak}")
-            # 立刻备份到本地文件，后续即使代理断了、响应丢了，密钥也不会丢
+            _log(f"✅ 新密钥已创建: {new_ak}")
             _backup_key(remark, ak, new_ak, new_sk, "created")
+            _log("💾 已备份到本地文件")
         except Exception as e:
-            return False, f"创建新密钥失败: {e}", None, None
+            _log(f"❌ 创建失败: {e}")
+            return False, f"创建新密钥失败: {e}", None, None, logs
 
         # 等待新密钥生效
+        _log("⏳ 等待新密钥生效...")
         new_key_active = False
         new_session = None
         for i in range(10):
@@ -171,15 +185,18 @@ def rotate_single_key(ak, sk, proxy_url=None, remark=""):
                 new_session = _new_session(new_ak, new_sk)
                 new_session.client("sts", config=_boto_config).get_caller_identity()
                 new_key_active = True
-                log_info(f"新密钥验证成功 (第 {i+1} 次)")
+                _log(f"✅ 新密钥已生效 (第 {i+1} 次尝试)")
                 break
             except Exception:
+                _log(f"   第 {i+1} 次验证未通过，等待 3s...")
                 time.sleep(3)
 
         if not new_key_active:
-            return True, "新密钥验证超时，未删除旧密钥，请手动检查", new_ak, new_sk
+            _log("⚠️ 新密钥验证超时，保留旧密钥")
+            return True, "新密钥验证超时，未删除旧密钥", new_ak, new_sk, logs
 
         # 删除旧密钥
+        _log(f"🗑️ 删除旧密钥 {ak}...")
         deleted = False
         for client in [new_session.client("iam", config=_boto_config), iam]:
             try:
@@ -189,11 +206,17 @@ def rotate_single_key(ak, sk, proxy_url=None, remark=""):
             except Exception:
                 continue
 
+        if deleted:
+            _log("✅ 旧密钥已删除，轮换完成")
+        else:
+            _log("⚠️ 旧密钥删除失败，请手动处理")
+
         msg = "成功 (旧密钥已删除)" if deleted else "新密钥已获取，但旧密钥删除失败"
-        return True, msg, new_ak, new_sk
+        return True, msg, new_ak, new_sk, logs
 
     except Exception as e:
-        return False, f"系统错误: {str(e)}", None, None
+        _log(f"❌ 系统错误: {str(e)}")
+        return False, f"系统错误: {str(e)}", None, None, logs
 
 
 @app.route("/")
@@ -236,15 +259,15 @@ def api_rotate():
     if not ak or not sk:
         return jsonify({"success": False, "msg": "无法识别密钥格式", "raw": line})
 
-    success, msg, new_ak, new_sk = rotate_single_key(ak, sk, proxy, remark)
+    success, msg, new_ak, new_sk, logs = rotate_single_key(ak, sk, proxy, remark)
 
     result = {
-        "success": success, "msg": msg,
+        "success": success, "msg": msg, "logs": logs,
         "old_ak": ak, "new_ak": new_ak, "new_sk": new_sk, "remark": remark,
     }
     if success:
         parts = [remark, new_ak, new_sk] if remark else [new_ak, new_sk]
-        result["output_line"] = " ".join(parts)
+        result["output_line"] = " | ".join(parts)
     return jsonify(result)
 
 
@@ -296,4 +319,4 @@ def api_check_proxy():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, threaded=True)
