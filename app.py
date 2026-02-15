@@ -16,17 +16,14 @@ _original_socket = socket.socket
 _proxy_lock = threading.Lock()
 
 # 密钥备份文件：每次生成新密钥立刻写入，防止响应丢失导致密钥丢失
-BACKUP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "keys_backup.csv")
+BACKUP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "keys_backup.txt")
 
 
 def _backup_key(remark, old_ak, new_ak, new_sk, msg):
     """新密钥创建后立刻写入本地文件，确保不丢失"""
     try:
-        write_header = not os.path.exists(BACKUP_FILE)
         with open(BACKUP_FILE, "a", encoding="utf-8") as f:
-            if write_header:
-                f.write("time,remark,old_ak,new_ak,new_sk,status\n")
-            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')},{remark},{old_ak},{new_ak},{new_sk},{msg}\n")
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} | {remark} | {old_ak} -> {new_ak} {new_sk} | {msg}\n")
     except Exception as e:
         log_error(f"备份写入失败: {e}")
 
@@ -265,15 +262,6 @@ def api_check_proxy():
         return jsonify({"success": True, "ip": ip})
     except Exception as e:
         return jsonify({"success": False, "msg": str(e)})
-
-
-@app.route("/api/backup")
-def api_backup():
-    """下载本地密钥备份文件"""
-    if os.path.exists(BACKUP_FILE):
-        from flask import send_file
-        return send_file(BACKUP_FILE, as_attachment=True, download_name="keys_backup.csv")
-    return jsonify({"success": False, "msg": "暂无备份记录"})
 
 
 if __name__ == "__main__":
