@@ -118,6 +118,7 @@
         <div class="tab-nav">
             <div class="tab-btn active" onclick="switchTab('rotate')">🔄 密钥轮换</div>
             <div class="tab-btn" onclick="switchTab('verify')">✅ 密钥验证</div>
+            <div class="tab-btn" onclick="switchTab('quota')">📊 配额查询</div>
         </div>
 
         <!-- 轮换 -->
@@ -168,6 +169,30 @@
             </div>
         </div>
     </div>
+        <!-- 配额查询 -->
+        <div id="tab-quota" class="workspace">
+            <div class="panels">
+                <div class="card">
+                    <div class="card-header"><span class="card-title">密钥列表</span><span class="badge" id="quotaLines">0 行</span></div>
+                    <div class="card-body"><textarea id="quotaInput" placeholder="在此粘贴密钥列表...&#10;查询 us-east-1 On-Demand vCPUs 配额"></textarea></div>
+                    <div class="card-footer"><button class="btn btn-ghost" onclick="clearInput('quota')">清空</button><button class="btn btn-primary" id="quotaBtn" onclick="startTask('quota')">开始查询</button></div>
+                </div>
+                <div class="card">
+                    <div class="progress-container"><div id="quotaProgress" class="progress-bar"></div></div>
+                    <div class="card-header"><span class="card-title">配额结果 (us-east-1)</span><span class="badge badge-info" id="quotaCount">完成: 0</span></div>
+                    <div class="card-body"><textarea id="quotaOutput" class="log-area" readonly placeholder="等待查询..."></textarea></div>
+                    <div class="card-footer">
+                        <div class="footer-btns"><button class="btn btn-secondary" onclick="downloadOutput('quotaOutput','quota_result.txt')">导出 TXT</button></div>
+                        <button class="btn btn-success" onclick="copyOutput('quotaOutput')">一键复制</button>
+                    </div>
+                </div>
+            </div>
+            <div class="console-bar">
+                <div class="console-header"><span class="console-title">📋 操作日志</span><button class="btn btn-ghost btn-sm" onclick="clearConsole('quota')">清空</button></div>
+                <div class="console-body" id="quotaConsole"></div>
+            </div>
+        </div>
+
     <!-- Toast 提示 -->
     <div id="toast" style="display:none;position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 28px;border-radius:12px;background:rgba(30,27,75,0.9);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;font-size:0.88rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.3);transition:opacity 0.3s,transform 0.3s;"></div>
 
@@ -218,9 +243,10 @@
         document.querySelectorAll('.workspace').forEach(e=>e.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
         document.getElementById('tab-'+name).classList.add('active');
-        document.querySelectorAll('.tab-btn')[name==='rotate'?0:1].classList.add('active');
+        const idx={rotate:0,verify:1,quota:2};
+        document.querySelectorAll('.tab-btn')[idx[name]].classList.add('active');
     }
-    ['rotate','verify'].forEach(t=>{
+    ['rotate','verify','quota'].forEach(t=>{
         document.getElementById(t+'Input').addEventListener('input',function(){
             document.getElementById(t+'Lines').textContent=this.value.trim().split('\n').filter(l=>l.trim()).length+' 行';
         });
@@ -256,9 +282,9 @@
         output.value='';progress.style.width='0%';clearConsole(type);
         if(type==='rotate')rotateResults=[];else verifyResults=[];
         proxyIndex=0;btn.disabled=true;btn.textContent='处理中...';
-        let ok=0;const api=type==='rotate'?'/api/rotate':'/api/verify';
+        let ok=0;const apiMap={rotate:'/api/rotate',verify:'/api/verify',quota:'/api/quota'};const api=apiMap[type];
 
-        appendLog(type, `🚀 开始${type==='rotate'?'轮换':'验证'}，共 ${lines.length} 条`);
+        appendLog(type, `🚀 开始${type==='rotate'?'轮换':type==='verify'?'验证':'配额查询'}，共 ${lines.length} 条`);
 
         for(let i=0;i<lines.length;i++){
             progress.style.width=((i+1)/lines.length*100)+'%';
@@ -272,9 +298,11 @@
                     if(type==='rotate'){
                         output.value+=r.output_line+'\n';
                         rotateResults.push({remark:r.remark,ak:r.new_ak,sk:r.new_sk,msg:r.msg});
-                    }else{
+                    }else if(type==='verify'){
                         output.value+=`${r.remark} | ${r.ak} | ${r.sk} | ${r.msg}\n`;
                         verifyResults.push({remark:r.remark,ak:r.ak,sk:r.sk,arn:r.arn||'',msg:r.msg});
+                    }else{
+                        output.value+=`${r.remark} | ${r.ak} | ${r.vcpus}V\n`;
                     }
                 }else{
                     output.value+=`[失败] ${lines[i].substring(0,30)}... | ${r.msg}\n`;
@@ -282,10 +310,10 @@
                 }
             }catch(e){output.value+=`[错误] ${e.message}\n`;appendLog(type,`❌ 网络错误: ${e.message}`,true);}
             output.scrollTop=output.scrollHeight;
-            count.textContent=`${type==='rotate'?'成功':'有效'}: ${ok}/${lines.length}`;
+            count.textContent=`${type==='rotate'?'成功':type==='verify'?'有效':'完成'}: ${ok}/${lines.length}`;
         }
         appendLog(type,`\n🏁 任务完成！成功 ${ok}/${lines.length}`);
-        btn.disabled=false;btn.textContent=type==='rotate'?'开始轮换':'开始验证';
+        btn.disabled=false;btn.textContent=type==='rotate'?'开始轮换':type==='verify'?'开始验证':'开始查询';
     }
 
     function copyOutput(id){document.getElementById(id).select();document.execCommand('copy');showToast('✅ 已复制到剪贴板');}

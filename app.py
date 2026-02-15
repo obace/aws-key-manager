@@ -383,5 +383,53 @@ def api_check_proxy():
         return jsonify({"success": False, "msg": str(e)})
 
 
+@app.route("/api/quota", methods=["POST"])
+def api_quota():
+    err = _require_login()
+    if err: return err
+    data = request.json
+    proxy = data.get("proxy")
+    line = data.get("line", "")
+
+    ak, sk, remark = parse_key_line(line)
+    if not ak or not sk:
+        return jsonify({"success": False, "msg": "格式错误", "raw": line, "logs": []})
+
+    qlogs = []
+    try:
+        if proxy:
+            qlogs.append("🔌 断开旧连接...")
+            qlogs.append(f"🔄 重连 SOCKS5: {proxy}")
+            reconnect_proxy(proxy)
+            ip = _detect_exit_ip()
+            qlogs.append(f"🌐 出口 IP: {ip}")
+        else:
+            qlogs.append("🌐 直连模式（无代理）")
+
+        qlogs.append(f"🔑 验证密钥 {ak[:8]}****...")
+        session = _new_session(ak, sk)
+        sq = session.client("service-quotas", region_name="us-east-1", config=_boto_config)
+
+        def _get_quota():
+            return sq.get_service_quota(
+                ServiceCode="ec2", QuotaCode="L-1216C47A"
+            )
+
+        resp = _call_with_retry(_get_quota, proxy)
+        vcpus = int(resp["Quota"]["Value"])
+        qlogs.append(f"✅ On-Demand vCPUs 配额: {vcpus}V")
+
+        return jsonify({
+            "success": True, "logs": qlogs,
+            "msg": f"{vcpus}V", "remark": remark, "ak": ak, "vcpus": vcpus,
+        })
+    except Exception as e:
+        qlogs.append(f"❌ 查询失败: {e}")
+        return jsonify({
+            "success": False, "msg": f"{e}", "logs": qlogs,
+            "remark": remark, "ak": ak,
+        })
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, threaded=True)
