@@ -27,8 +27,8 @@
         .proxy-input::placeholder { color:rgba(255,255,255,0.2); }
         .proxy-mode-label { font-size:0.7rem; color:rgba(255,255,255,0.3); white-space:nowrap; }
 
-        .main-container { flex:1; padding:1rem 1.5rem; position:relative; z-index:1; display:flex; flex-direction:column; gap:12px; max-width:1500px; width:100%; margin:0 auto; }
-        .tab-nav { display:flex; gap:6px; }
+        .main-container { flex:1; padding:1rem 1.5rem; position:relative; z-index:1; display:flex; flex-direction:column; gap:12px; width:100%; margin:0 auto; }
+        .tab-nav { display:flex; gap:6px; justify-content:center; }
         .tab-btn { padding:8px 20px; border-radius:10px; font-weight:500; font-size:0.85rem; color:rgba(255,255,255,0.4); cursor:pointer; transition:all 0.3s; background:transparent; border:1px solid transparent; }
         .tab-btn:hover { color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.04); }
         .tab-btn.active { color:#c4b5fd; background:rgba(139,92,246,0.12); border-color:rgba(139,92,246,0.25); }
@@ -36,6 +36,7 @@
         .workspace { display:none; flex-direction:column; gap:12px; height:calc(100vh - 145px); animation:fadeIn 0.4s ease; }
         .workspace.active { display:flex; }
         .panels { display:grid; grid-template-columns:1fr 1fr; gap:16px; flex:1; min-height:0; }
+        .panels > .card { min-width:0; }
 
         .card {
             display:flex; flex-direction:column; overflow:hidden;
