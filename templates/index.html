@@ -182,7 +182,7 @@
                     <div class="card-header"><span class="card-title">配额结果 (us-east-1)</span><span class="badge badge-info" id="quotaCount">完成: 0</span></div>
                     <div class="card-body"><textarea id="quotaOutput" class="log-area" readonly placeholder="等待查询..."></textarea></div>
                     <div class="card-footer">
-                        <div class="footer-btns"><button class="btn btn-secondary" onclick="downloadOutput('quotaOutput','quota_result.txt')">导出 TXT</button></div>
+                        <div class="footer-btns"><button class="btn btn-secondary" onclick="downloadOutput('quotaOutput','quota_result.txt')">导出 TXT</button><button class="btn btn-secondary" onclick="downloadCSV('quota')">导出 CSV</button></div>
                         <button class="btn btn-success" onclick="copyOutput('quotaOutput')">一键复制</button>
                     </div>
                 </div>
@@ -211,7 +211,7 @@
         </div>
     </div>
 <script>
-    let proxyIndex=0, rotateResults=[], verifyResults=[];
+    let proxyIndex=0, rotateResults=[], verifyResults=[], quotaResults=[];
 
     // 页面加载时恢复代理
     (function(){const saved=localStorage.getItem('akm_proxy');if(saved){document.getElementById('globalProxy').value=saved;updateProxyLabel();}})();
@@ -280,7 +280,7 @@
         const lines=input.value.trim().split('\n').filter(l=>l.trim());
         if(!lines.length){showToast('⚠️ 请先输入内容');return;}
         output.value='';progress.style.width='0%';clearConsole(type);
-        if(type==='rotate')rotateResults=[];else verifyResults=[];
+        if(type==='rotate')rotateResults=[];else if(type==='verify')verifyResults=[];else quotaResults=[];
         proxyIndex=0;btn.disabled=true;btn.textContent='处理中...';
         let ok=0;const apiMap={rotate:'/api/rotate',verify:'/api/verify',quota:'/api/quota'};const api=apiMap[type];
 
@@ -303,6 +303,7 @@
                         verifyResults.push({remark:r.remark,ak:r.ak,sk:r.sk,arn:r.arn||'',msg:r.msg});
                     }else{
                         output.value+=`${r.remark} | ${r.ak} | ${r.sk} | ${r.vcpus}V\n`;
+                        quotaResults.push({remark:r.remark,ak:r.ak,sk:r.sk,vcpus:r.vcpus});
                     }
                 }else{
                     output.value+=`[失败] ${lines[i].substring(0,30)}... | ${r.msg}\n`;
@@ -319,11 +320,15 @@
     function copyOutput(id){document.getElementById(id).select();document.execCommand('copy');showToast('✅ 已复制到剪贴板');}
     function downloadOutput(id,fn){const b=new Blob([document.getElementById(id).value],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;a.click();}
     function downloadCSV(type){
-        const r=type==='rotate'?rotateResults:verifyResults;
+        const rMap={rotate:rotateResults,verify:verifyResults,quota:quotaResults};
+        const r=rMap[type];
         if(!r.length){showToast('⚠️ 没有数据');return;}
-        let c;if(type==='rotate'){c='Remark,AccessKeyId,SecretAccessKey,Status\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.msg}"\n`;});}
-        else{c='Remark,AccessKeyId,SecretAccessKey,ARN,Status\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.arn}","${x.msg}"\n`;});}
-        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download=type==='rotate'?'new_keys.csv':'valid_keys.csv';a.click();
+        let c;
+        if(type==='rotate'){c='Remark,AccessKeyId,SecretAccessKey,Status\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.msg}"\n`;});}
+        else if(type==='verify'){c='Remark,AccessKeyId,SecretAccessKey,ARN,Status\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.arn}","${x.msg}"\n`;});}
+        else{c='Remark,AccessKeyId,SecretAccessKey,vCPUs\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.vcpus}"\n`;});}
+        const fn={rotate:'new_keys.csv',verify:'valid_keys.csv',quota:'quota_result.csv'};
+        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download=fn[type];a.click();
     }
 </script>
 </body>
