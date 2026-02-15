@@ -4,70 +4,156 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AWS Key Manager Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #4F46E5;
-            --primary-hover: #4338CA;
-            --bg-body: #F3F4F6;
-            --bg-card: #FFFFFF;
-            --text-main: #111827;
-            --text-sub: #6B7280;
-            --border: #E5E7EB;
-            --success: #10B981;
-            --error: #EF4444;
-            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-            --radius: 12px;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'SF Pro Display', -apple-system, 'Segoe UI', sans-serif;
+            min-height: 100vh; display: flex; flex-direction: column;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #e0e0e0;
+            overflow: hidden;
         }
-        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; height: 100vh; display: flex; flex-direction: column; }
-        .navbar { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 64px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .brand { font-size: 1.25rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
-        .proxy-bar { display: flex; align-items: center; gap: 12px; background: #F9FAFB; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); }
-        .proxy-input { border: none; background: transparent; outline: none; font-size: 0.9rem; width: 280px; color: var(--text-main); }
-        .proxy-mode-label { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
-        .btn-sm { padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; }
-        .main-container { flex: 1; padding: 2rem; max-width: 1400px; width: 100%; margin: 0 auto; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; }
-        .tab-nav { display: flex; gap: 8px; margin-bottom: 10px; }
-        .tab-btn { padding: 10px 24px; border-radius: 8px; font-weight: 500; color: var(--text-sub); cursor: pointer; transition: all 0.2s; background: transparent; }
-        .tab-btn:hover { background: rgba(79,70,229,0.05); color: var(--primary); }
-        .tab-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: var(--shadow); font-weight: 600; }
-        .workspace { display: none; grid-template-columns: 1fr 1fr; gap: 24px; height: calc(100vh - 180px); animation: fadeIn 0.3s ease-out; }
+        /* 背景光斑 */
+        body::before, body::after {
+            content: ''; position: fixed; border-radius: 50%; filter: blur(120px); z-index: 0; pointer-events: none;
+        }
+        body::before { width: 600px; height: 600px; background: rgba(99, 102, 241, 0.15); top: -200px; left: -100px; }
+        body::after { width: 500px; height: 500px; background: rgba(236, 72, 153, 0.12); bottom: -150px; right: -100px; }
+
+        /* 毛玻璃基础 */
+        .glass {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+
+        /* 导航 */
+        .navbar {
+            position: relative; z-index: 10;
+            padding: 0 2rem; height: 60px; display: flex; align-items: center; justify-content: space-between;
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .brand { font-size: 1.15rem; font-weight: 600; color: #c4b5fd; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px; }
+        .proxy-bar {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(255, 255, 255, 0.05); padding: 6px 14px; border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .proxy-input { border: none; background: transparent; outline: none; font-size: 0.85rem; width: 280px; color: #d1d5db; }
+        .proxy-input::placeholder { color: rgba(255,255,255,0.25); }
+        .proxy-mode-label { font-size: 0.72rem; color: rgba(255,255,255,0.35); white-space: nowrap; }
+
+        /* 主体 */
+        .main-container { flex: 1; padding: 1.5rem 2rem; position: relative; z-index: 1; display: flex; flex-direction: column; gap: 16px; max-width: 1440px; width: 100%; margin: 0 auto; }
+        .tab-nav { display: flex; gap: 6px; }
+        .tab-btn {
+            padding: 9px 22px; border-radius: 10px; font-weight: 500; font-size: 0.9rem;
+            color: rgba(255,255,255,0.4); cursor: pointer; transition: all 0.3s;
+            background: transparent; border: 1px solid transparent;
+        }
+        .tab-btn:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.04); }
+        .tab-btn.active {
+            color: #c4b5fd; background: rgba(139, 92, 246, 0.12);
+            border-color: rgba(139, 92, 246, 0.25); box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+        }
+
+        .workspace { display: none; grid-template-columns: 1fr 1fr; gap: 20px; height: calc(100vh - 170px); animation: fadeIn 0.4s ease; }
         .workspace.active { display: grid; }
-        .card { background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); }
-        .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #FAFAFA; }
-        .card-title { font-weight: 600; font-size: 1rem; }
-        .card-body { flex: 1; padding: 0; display: flex; flex-direction: column; position: relative; }
-        textarea { flex: 1; width: 100%; border: none; padding: 20px; resize: none; font-family: 'Monaco','Menlo',monospace; font-size: 0.9rem; line-height: 1.6; outline: none; box-sizing: border-box; }
-        textarea::placeholder { color: #D1D5DB; }
-        .log-area { background: #111827; color: #E5E7EB; }
-        .card-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.2s; border: none; gap: 6px; }
-        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 6px rgba(79,70,229,0.2); }
-        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-secondary { background: white; border: 1px solid var(--border); color: var(--text-main); }
-        .btn-secondary:hover { background: #F9FAFB; }
-        .btn-ghost { background: transparent; color: var(--text-sub); padding: 8px; }
-        .btn-ghost:hover { color: var(--error); background: #FEF2F2; }
-        .badge { display: inline-flex; padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; background: #E5E7EB; color: #4B5563; }
-        .progress-container { position: absolute; top: 0; left: 0; right: 0; height: 3px; z-index: 10; }
-        .progress-bar { height: 100%; background: var(--success); width: 0; transition: width 0.3s ease; box-shadow: 0 0 10px rgba(16,185,129,0.5); }
+
+        .card {
+            display: flex; flex-direction: column; overflow: hidden;
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        .card-header {
+            padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .card-title { font-weight: 600; font-size: 0.92rem; color: rgba(255,255,255,0.8); }
+        .card-body { flex: 1; position: relative; display: flex; flex-direction: column; }
+
+        textarea {
+            flex: 1; width: 100%; border: none; padding: 18px; resize: none;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', monospace; font-size: 0.85rem; line-height: 1.7;
+            outline: none; background: transparent; color: #d1d5db;
+        }
+        textarea::placeholder { color: rgba(255,255,255,0.15); }
+        .log-area { color: #a5b4fc; }
+
+        .card-footer {
+            padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
         .footer-btns { display: flex; gap: 8px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 按钮 */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 9px 18px; border-radius: 10px; font-weight: 500; font-size: 0.85rem;
+            cursor: pointer; transition: all 0.3s; border: none; gap: 6px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+        .btn-primary:hover { box-shadow: 0 6px 25px rgba(99, 102, 241, 0.45); transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255,255,255,0.6);
+        }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); color: rgba(255,255,255,0.85); }
+        .btn-sm { padding: 5px 12px; font-size: 0.78rem; border-radius: 8px; }
+        .btn-ghost { background: transparent; color: rgba(255,255,255,0.3); padding: 8px 12px; }
+        .btn-ghost:hover { color: #f87171; background: rgba(248, 113, 113, 0.1); }
+        .btn-success {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+        }
+        .btn-success:hover { box-shadow: 0 6px 25px rgba(16, 185, 129, 0.4); transform: translateY(-1px); }
+
+        .badge {
+            padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+            background: rgba(255, 255, 255, 0.06); color: rgba(255,255,255,0.45);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .badge-success { background: rgba(16, 185, 129, 0.12); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.2); }
+        .badge-info { background: rgba(99, 102, 241, 0.12); color: #a5b4fc; border-color: rgba(99, 102, 241, 0.2); }
+
+        .progress-container { position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 10; }
+        .progress-bar {
+            height: 100%; width: 0; transition: width 0.3s ease;
+            background: linear-gradient(90deg, #7c3aed, #06b6d4);
+            box-shadow: 0 0 12px rgba(124, 58, 237, 0.5);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="brand">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             AWS Key Manager
         </div>
         <div class="proxy-bar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-            <input type="text" id="globalProxy" class="proxy-input" placeholder="SOCKS5 代理，多个用逗号分隔（自动轮换）">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <input type="text" id="globalProxy" class="proxy-input" placeholder="SOCKS5 代理地址">
             <span class="proxy-mode-label" id="proxyModeLabel">直连模式</span>
             <button class="btn btn-secondary btn-sm" onclick="checkProxy()">检测</button>
-            <span id="proxyStatus" style="font-size:0.8rem;font-weight:500;min-width:80px;text-align:center;"></span>
+            <span id="proxyStatus" style="font-size:0.78rem;font-weight:500;min-width:70px;text-align:center;"></span>
         </div>
     </nav>
     <div class="main-container">
@@ -75,190 +161,117 @@
             <div class="tab-btn active" onclick="switchTab('rotate')">🔄 密钥轮换</div>
             <div class="tab-btn" onclick="switchTab('verify')">✅ 密钥验证</div>
         </div>
+        <!-- 轮换 -->
         <div id="tab-rotate" class="workspace active">
             <div class="card">
                 <div class="card-header"><span class="card-title">旧密钥列表</span><span class="badge" id="rotateLines">0 行</span></div>
-                <div class="card-body"><textarea id="rotateInput" placeholder="在此粘贴密钥列表...&#10;格式支持：&#10;user@example.com AKIA... SECRET...&#10;备注信息 AKIA... SECRET..."></textarea></div>
-                <div class="card-footer">
-                    <button class="btn btn-ghost" onclick="clearInput('rotate')">清空</button>
-                    <button class="btn btn-primary" id="rotateBtn" onclick="startTask('rotate')">开始轮换</button>
-                </div>
+                <div class="card-body"><textarea id="rotateInput" placeholder="在此粘贴密钥列表...&#10;&#10;支持格式：&#10;user@example.com AKIA... SECRET...&#10;备注 AKIA... SECRET..."></textarea></div>
+                <div class="card-footer"><button class="btn btn-ghost" onclick="clearInput('rotate')">清空</button><button class="btn btn-primary" id="rotateBtn" onclick="startTask('rotate')">开始轮换</button></div>
             </div>
             <div class="card">
                 <div class="progress-container"><div id="rotateProgress" class="progress-bar"></div></div>
-                <div class="card-header"><span class="card-title">新密钥结果</span><span class="badge" style="background:#D1FAE5;color:#065F46;" id="rotateCount">成功: 0</span></div>
+                <div class="card-header"><span class="card-title">新密钥结果</span><span class="badge badge-success" id="rotateCount">成功: 0</span></div>
                 <div class="card-body"><textarea id="rotateOutput" class="log-area" readonly placeholder="等待任务开始..."></textarea></div>
                 <div class="card-footer">
                     <div class="footer-btns">
                         <button class="btn btn-secondary" onclick="downloadOutput('rotateOutput','new_keys.txt')">导出 TXT</button>
                         <button class="btn btn-secondary" onclick="downloadCSV('rotate')">导出 CSV</button>
                     </div>
-                    <button class="btn btn-primary" style="background:var(--success);" onclick="copyOutput('rotateOutput')">一键复制</button>
+                    <button class="btn btn-success" onclick="copyOutput('rotateOutput')">一键复制</button>
                 </div>
             </div>
         </div>
+        <!-- 验证 -->
         <div id="tab-verify" class="workspace">
             <div class="card">
                 <div class="card-header"><span class="card-title">待验证列表</span><span class="badge" id="verifyLines">0 行</span></div>
                 <div class="card-body"><textarea id="verifyInput" placeholder="在此粘贴需要验证的密钥列表..."></textarea></div>
-                <div class="card-footer">
-                    <button class="btn btn-ghost" onclick="clearInput('verify')">清空</button>
-                    <button class="btn btn-primary" id="verifyBtn" onclick="startTask('verify')">开始验证</button>
-                </div>
+                <div class="card-footer"><button class="btn btn-ghost" onclick="clearInput('verify')">清空</button><button class="btn btn-primary" id="verifyBtn" onclick="startTask('verify')">开始验证</button></div>
             </div>
             <div class="card">
                 <div class="progress-container"><div id="verifyProgress" class="progress-bar"></div></div>
-                <div class="card-header"><span class="card-title">验证报告</span><span class="badge" style="background:#DBEAFE;color:#1E40AF;" id="verifyCount">有效: 0</span></div>
+                <div class="card-header"><span class="card-title">验证报告</span><span class="badge badge-info" id="verifyCount">有效: 0</span></div>
                 <div class="card-body"><textarea id="verifyOutput" class="log-area" readonly placeholder="等待任务开始..."></textarea></div>
                 <div class="card-footer">
                     <div class="footer-btns">
                         <button class="btn btn-secondary" onclick="downloadOutput('verifyOutput','valid_keys.txt')">导出 TXT</button>
                         <button class="btn btn-secondary" onclick="downloadCSV('verify')">导出 CSV</button>
                     </div>
-                    <button class="btn btn-primary" style="background:var(--success);" onclick="copyOutput('verifyOutput')">一键复制</button>
+                    <button class="btn btn-success" onclick="copyOutput('verifyOutput')">一键复制</button>
                 </div>
             </div>
         </div>
     </div>
 <script>
-    // 代理池：支持逗号分隔多个代理，轮换使用
-    let proxyIndex = 0;
-    // 存储结构化结果用于 CSV 导出
-    let rotateResults = [];
-    let verifyResults = [];
+    let proxyIndex = 0, rotateResults = [], verifyResults = [];
 
     function getProxies() {
-        const raw = document.getElementById('globalProxy').value.trim();
-        if (!raw) return [];
-        return raw.split(',').map(p => p.trim()).filter(Boolean);
+        const r = document.getElementById('globalProxy').value.trim();
+        return r ? r.split(',').map(p => p.trim()).filter(Boolean) : [];
     }
-
-    function getNextProxy() {
-        const proxies = getProxies();
-        if (proxies.length === 0) return '';
-        const p = proxies[proxyIndex % proxies.length];
-        proxyIndex++;
-        return p;
-    }
-
+    function getNextProxy() { const p = getProxies(); if (!p.length) return ''; return p[proxyIndex++ % p.length]; }
     function updateProxyLabel() {
-        const proxies = getProxies();
-        const label = document.getElementById('proxyModeLabel');
-        if (proxies.length === 0) { label.textContent = '直连模式'; }
-        else if (proxies.length === 1) { label.textContent = '单代理'; }
-        else { label.textContent = `${proxies.length} 个代理轮换`; }
+        const p = getProxies(), l = document.getElementById('proxyModeLabel');
+        l.textContent = p.length === 0 ? '直连模式' : p.length === 1 ? '单代理' : p.length + ' 个代理轮换';
     }
-
     document.getElementById('globalProxy').addEventListener('input', updateProxyLabel);
 
     function switchTab(name) {
-        document.querySelectorAll('.workspace').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.workspace').forEach(e => e.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
         document.getElementById('tab-' + name).classList.add('active');
         document.querySelectorAll('.tab-btn')[name === 'rotate' ? 0 : 1].classList.add('active');
     }
-
-    ['rotate','verify'].forEach(type => {
-        document.getElementById(type + 'Input').addEventListener('input', function() {
-            const lines = this.value.trim().split('\n').filter(l => l.trim());
-            document.getElementById(type + 'Lines').textContent = lines.length + ' 行';
+    ['rotate','verify'].forEach(t => {
+        document.getElementById(t+'Input').addEventListener('input', function() {
+            document.getElementById(t+'Lines').textContent = this.value.trim().split('\n').filter(l=>l.trim()).length + ' 行';
         });
     });
-
-    function clearInput(type) {
-        document.getElementById(type + 'Input').value = '';
-        document.getElementById(type + 'Lines').textContent = '0 行';
-    }
+    function clearInput(t) { document.getElementById(t+'Input').value=''; document.getElementById(t+'Lines').textContent='0 行'; }
 
     async function checkProxy() {
-        const proxies = getProxies();
-        const status = document.getElementById('proxyStatus');
-        if (proxies.length === 0) { status.textContent = '直连模式'; status.style.color = '#9CA3AF'; return; }
-        status.textContent = '检测中...'; status.style.color = '#6B7280';
+        const p = getProxies(), s = document.getElementById('proxyStatus');
+        if (!p.length) { s.textContent='直连'; s.style.color='rgba(255,255,255,0.3)'; return; }
+        s.textContent='检测中...'; s.style.color='rgba(255,255,255,0.4)';
         try {
-            const res = await fetch('/api/check_proxy', {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({proxy: proxies[0]})
-            }).then(r => r.json());
-            if (res.success) { status.textContent = '✅ ' + res.ip; status.style.color = '#10B981'; }
-            else { status.textContent = '❌ 失败'; status.style.color = '#EF4444'; }
-        } catch(e) { status.textContent = '❌ 错误'; status.style.color = '#EF4444'; }
+            const r = await fetch('/api/check_proxy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proxy:p[0]})}).then(r=>r.json());
+            if(r.success){s.textContent='✅ '+r.ip;s.style.color='#6ee7b7';}else{s.textContent='❌ 失败';s.style.color='#f87171';}
+        } catch(e){s.textContent='❌ 错误';s.style.color='#f87171';}
     }
 
     async function startTask(type) {
-        const input = document.getElementById(type + 'Input');
-        const output = document.getElementById(type + 'Output');
-        const progress = document.getElementById(type + 'Progress');
-        const count = document.getElementById(type + 'Count');
-        const btn = document.getElementById(type + 'Btn');
-        const lines = input.value.trim().split('\n').filter(l => l.trim());
-        if (!lines.length) { alert('请先输入内容！'); return; }
-
-        // 重置
-        output.value = ''; progress.style.width = '0%';
-        if (type === 'rotate') rotateResults = []; else verifyResults = [];
-        proxyIndex = 0;
-        btn.disabled = true; btn.textContent = '处理中...';
-
-        let ok = 0;
-        const api = type === 'rotate' ? '/api/rotate' : '/api/verify';
-
-        for (let i = 0; i < lines.length; i++) {
-            progress.style.width = ((i + 1) / lines.length * 100) + '%';
-            const proxy = getNextProxy();
-            try {
-                const res = await fetch(api, {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({proxy, line: lines[i]})
-                }).then(r => r.json());
-
-                if (res.success) {
-                    ok++;
-                    if (type === 'rotate') {
-                        output.value += res.output_line + '\n';
-                        rotateResults.push({remark: res.remark, ak: res.new_ak, sk: res.new_sk, msg: res.msg});
-                    } else {
-                        output.value += `[有效] ${res.remark} | ${res.ak} | ${res.msg}\n`;
-                        verifyResults.push({remark: res.remark, ak: res.ak, sk: res.sk, arn: res.arn || '', msg: res.msg});
-                    }
-                } else {
-                    output.value += `[失败] ${lines[i].substring(0,30)}... | ${res.msg}\n`;
-                }
-            } catch(e) { output.value += `[错误] ${e.message}\n`; }
-            output.scrollTop = output.scrollHeight;
-            count.textContent = `${type === 'rotate' ? '成功' : '有效'}: ${ok}/${lines.length}`;
+        const input=document.getElementById(type+'Input'), output=document.getElementById(type+'Output'),
+              progress=document.getElementById(type+'Progress'), count=document.getElementById(type+'Count'),
+              btn=document.getElementById(type+'Btn');
+        const lines=input.value.trim().split('\n').filter(l=>l.trim());
+        if(!lines.length){alert('请先输入内容！');return;}
+        output.value=''; progress.style.width='0%';
+        if(type==='rotate') rotateResults=[]; else verifyResults=[];
+        proxyIndex=0; btn.disabled=true; btn.textContent='处理中...';
+        let ok=0; const api=type==='rotate'?'/api/rotate':'/api/verify';
+        for(let i=0;i<lines.length;i++){
+            progress.style.width=((i+1)/lines.length*100)+'%';
+            try{
+                const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proxy:getNextProxy(),line:lines[i]})}).then(r=>r.json());
+                if(r.success){ok++;
+                    if(type==='rotate'){output.value+=r.output_line+'\n';rotateResults.push({remark:r.remark,ak:r.new_ak,sk:r.new_sk,msg:r.msg});}
+                    else{output.value+=`[有效] ${r.remark} | ${r.ak} | ${r.msg}\n`;verifyResults.push({remark:r.remark,ak:r.ak,sk:r.sk,arn:r.arn||'',msg:r.msg});}
+                }else{output.value+=`[失败] ${lines[i].substring(0,30)}... | ${r.msg}\n`;}
+            }catch(e){output.value+=`[错误] ${e.message}\n`;}
+            output.scrollTop=output.scrollHeight;
+            count.textContent=`${type==='rotate'?'成功':'有效'}: ${ok}/${lines.length}`;
         }
-        btn.disabled = false; btn.textContent = type === 'rotate' ? '开始轮换' : '开始验证';
+        btn.disabled=false; btn.textContent=type==='rotate'?'开始轮换':'开始验证';
     }
 
-    function copyOutput(id) {
-        const el = document.getElementById(id);
-        el.select(); document.execCommand('copy');
-        alert('已复制！');
-    }
-
-    function downloadOutput(id, filename) {
-        const blob = new Blob([document.getElementById(id).value], {type:'text/plain'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = filename; a.click();
-    }
-
-    function downloadCSV(type) {
-        const results = type === 'rotate' ? rotateResults : verifyResults;
-        if (!results.length) { alert('没有数据可导出'); return; }
-        let csv;
-        if (type === 'rotate') {
-            csv = 'Remark,AccessKeyId,SecretAccessKey,Status\n';
-            results.forEach(r => { csv += `"${r.remark}","${r.ak}","${r.sk}","${r.msg}"\n`; });
-        } else {
-            csv = 'Remark,AccessKeyId,SecretAccessKey,ARN,Status\n';
-            results.forEach(r => { csv += `"${r.remark}","${r.ak}","${r.sk}","${r.arn}","${r.msg}"\n`; });
-        }
-        const blob = new Blob([csv], {type:'text/csv'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = type === 'rotate' ? 'new_keys.csv' : 'valid_keys.csv';
-        a.click();
+    function copyOutput(id){document.getElementById(id).select();document.execCommand('copy');alert('已复制！');}
+    function downloadOutput(id,fn){const b=new Blob([document.getElementById(id).value],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;a.click();}
+    function downloadCSV(type){
+        const r=type==='rotate'?rotateResults:verifyResults;
+        if(!r.length){alert('没有数据');return;}
+        let c; if(type==='rotate'){c='Remark,AccessKeyId,SecretAccessKey,Status\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.msg}"\n`;});}
+        else{c='Remark,AccessKeyId,SecretAccessKey,ARN,Status\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.arn}","${x.msg}"\n`;});}
+        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download=type==='rotate'?'new_keys.csv':'valid_keys.csv';a.click();
     }
 </script>
 </body>
