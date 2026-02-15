@@ -168,6 +168,9 @@
             </div>
         </div>
     </div>
+    <!-- Toast 提示 -->
+    <div id="toast" style="display:none;position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 28px;border-radius:12px;background:rgba(30,27,75,0.9);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;font-size:0.88rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.3);transition:opacity 0.3s,transform 0.3s;"></div>
+
     <!-- 修改密码弹窗 -->
     <div id="pwdModal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
         <div style="background:rgba(30,27,75,0.95);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px;width:340px;box-shadow:0 16px 64px rgba(0,0,0,0.4);">
@@ -187,7 +190,12 @@
 
     // 页面加载时恢复代理
     (function(){const saved=localStorage.getItem('akm_proxy');if(saved){document.getElementById('globalProxy').value=saved;updateProxyLabel();}})();
-    function saveProxy(){localStorage.setItem('akm_proxy',document.getElementById('globalProxy').value);alert('已保存');}
+    function saveProxy(){localStorage.setItem('akm_proxy',document.getElementById('globalProxy').value);showToast('✅ 代理已保存');}
+
+    function showToast(msg,duration=2000){
+        const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
+        setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(-10px)';setTimeout(()=>t.style.display='none',300);},duration);
+    }
 
     function showPwdModal(){document.getElementById('pwdModal').style.display='flex';document.getElementById('oldPwd').focus();}
     function hidePwdModal(){document.getElementById('pwdModal').style.display='none';['oldPwd','newPwd','newPwd2'].forEach(id=>document.getElementById(id).value='');document.getElementById('pwdMsg').textContent='';}
@@ -196,7 +204,7 @@
         if(n!==n2){msg.textContent='两次密码不一致';msg.style.color='#f87171';return;}
         try{
             const r=await fetch('/api/change_password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({old_password:o,new_password:n})}).then(r=>r.json());
-            if(r.success){msg.textContent='✅ '+r.msg;msg.style.color='#6ee7b7';setTimeout(hidePwdModal,1000);}
+            if(r.success){hidePwdModal();showToast('✅ '+r.msg);}
             else{msg.textContent=r.msg;msg.style.color='#f87171';}
         }catch(e){msg.textContent='网络错误';msg.style.color='#f87171';}
     }
@@ -244,7 +252,7 @@
               progress=document.getElementById(type+'Progress'),count=document.getElementById(type+'Count'),
               btn=document.getElementById(type+'Btn');
         const lines=input.value.trim().split('\n').filter(l=>l.trim());
-        if(!lines.length){alert('请先输入内容！');return;}
+        if(!lines.length){showToast('⚠️ 请先输入内容');return;}
         output.value='';progress.style.width='0%';clearConsole(type);
         if(type==='rotate')rotateResults=[];else verifyResults=[];
         proxyIndex=0;btn.disabled=true;btn.textContent='处理中...';
@@ -280,11 +288,11 @@
         btn.disabled=false;btn.textContent=type==='rotate'?'开始轮换':'开始验证';
     }
 
-    function copyOutput(id){document.getElementById(id).select();document.execCommand('copy');alert('已复制！');}
+    function copyOutput(id){document.getElementById(id).select();document.execCommand('copy');showToast('✅ 已复制到剪贴板');}
     function downloadOutput(id,fn){const b=new Blob([document.getElementById(id).value],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;a.click();}
     function downloadCSV(type){
         const r=type==='rotate'?rotateResults:verifyResults;
-        if(!r.length){alert('没有数据');return;}
+        if(!r.length){showToast('⚠️ 没有数据');return;}
         let c;if(type==='rotate'){c='Remark,AccessKeyId,SecretAccessKey,Status\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.msg}"\n`;});}
         else{c='Remark,AccessKeyId,SecretAccessKey,ARN,Status\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.arn}","${x.msg}"\n`;});}
         const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download=type==='rotate'?'new_keys.csv':'valid_keys.csv';a.click();
