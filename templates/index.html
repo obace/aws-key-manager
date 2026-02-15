@@ -6,95 +6,76 @@
     <title>AWS Key Manager Pro</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%237c3aed'/><stop offset='100%25' stop-color='%2306b6d4'/></linearGradient></defs><circle cx='32' cy='24' r='10' fill='none' stroke='url(%23g)' stroke-width='4'/><rect x='28' y='34' width='8' height='20' rx='4' fill='url(%23g)'/><circle cx='20' cy='50' r='5' fill='none' stroke='url(%23g)' stroke-width='3'/><circle cx='44' cy='44' r='5' fill='none' stroke='url(%23g)' stroke-width='3'/></svg>">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'SF Pro Display', -apple-system, 'Segoe UI', sans-serif;
-            min-height: 100vh; display: flex; flex-direction: column;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            color: #e0e0e0; overflow: hidden;
-        }
-        body::before, body::after { content:''; position:fixed; border-radius:50%; filter:blur(120px); z-index:0; pointer-events:none; }
-        body::before { width:600px; height:600px; background:rgba(99,102,241,0.15); top:-200px; left:-100px; }
-        body::after { width:500px; height:500px; background:rgba(236,72,153,0.12); bottom:-150px; right:-100px; }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'SF Pro Display',-apple-system,sans-serif;min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:#e0e0e0;overflow:hidden}
+        body::before,body::after{content:'';position:fixed;border-radius:50%;filter:blur(120px);z-index:0;pointer-events:none}
+        body::before{width:600px;height:600px;background:rgba(99,102,241,0.15);top:-200px;left:-100px}
+        body::after{width:500px;height:500px;background:rgba(236,72,153,0.12);bottom:-150px;right:-100px}
 
-        .navbar {
-            position:relative; z-index:10; padding:0 2rem; height:56px; display:flex; align-items:center; justify-content:space-between;
-            background:rgba(255,255,255,0.04); backdrop-filter:blur(30px); border-bottom:1px solid rgba(255,255,255,0.08);
-        }
-        .brand { font-size:1.1rem; font-weight:600; color:#c4b5fd; display:flex; align-items:center; gap:10px; }
-        .proxy-bar { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.05); padding:5px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); }
-        .proxy-input { border:none; background:transparent; outline:none; font-size:0.82rem; width:260px; color:#d1d5db; }
-        .proxy-input::placeholder { color:rgba(255,255,255,0.2); }
-        .proxy-mode-label { font-size:0.7rem; color:rgba(255,255,255,0.3); white-space:nowrap; }
+        .navbar{position:relative;z-index:10;padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.04);backdrop-filter:blur(30px);border-bottom:1px solid rgba(255,255,255,0.08)}
+        .brand{font-size:1.1rem;font-weight:600;color:#c4b5fd;display:flex;align-items:center;gap:10px}
+        .nav-right{display:flex;align-items:center;gap:12px}
+        .proxy-bar{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.05);padding:5px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08)}
+        .proxy-input{border:none;background:transparent;outline:none;font-size:0.82rem;width:260px;color:#d1d5db}
+        .proxy-input::placeholder{color:rgba(255,255,255,0.2)}
+        .proxy-mode-label{font-size:0.7rem;color:rgba(255,255,255,0.3);white-space:nowrap}
 
-        .main-container { flex:1; padding:1rem 1.5rem; position:relative; z-index:1; display:flex; flex-direction:column; gap:12px; width:100%; margin:0 auto; }
-        .tab-nav { display:flex; gap:6px; justify-content:center; }
-        .tab-btn { padding:8px 20px; border-radius:10px; font-weight:500; font-size:0.85rem; color:rgba(255,255,255,0.4); cursor:pointer; transition:all 0.3s; background:transparent; border:1px solid transparent; }
-        .tab-btn:hover { color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.04); }
-        .tab-btn.active { color:#c4b5fd; background:rgba(139,92,246,0.12); border-color:rgba(139,92,246,0.25); }
+        .main{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto;gap:0;position:relative;z-index:1;padding:1rem 1.5rem;height:calc(100vh - 56px)}
 
-        .workspace { display:none; flex-direction:column; gap:12px; height:calc(100vh - 145px); animation:fadeIn 0.4s ease; }
-        .workspace.active { display:flex; }
-        .panels { display:grid; grid-template-columns:1fr 1fr; gap:16px; flex:1; min-height:0; }
-        .panels > .card { min-width:0; overflow:hidden; }
+        .toolbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding-bottom:12px}
+        .tab-nav{display:flex;gap:6px}
+        .tab-btn{padding:8px 20px;border-radius:10px;font-weight:500;font-size:0.85rem;color:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.3s;background:transparent;border:1px solid transparent}
+        .tab-btn:hover{color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.04)}
+        .tab-btn.active{color:#c4b5fd;background:rgba(139,92,246,0.12);border-color:rgba(139,92,246,0.25)}
+        .toolbar-info{display:flex;align-items:center;gap:12px}
 
-        .card {
-            display:flex; flex-direction:column; overflow:hidden;
-            background:rgba(255,255,255,0.04); backdrop-filter:blur(24px);
-            border:1px solid rgba(255,255,255,0.08); border-radius:14px;
-            box-shadow:0 8px 32px rgba(0,0,0,0.2);
-        }
-        .card-header { padding:12px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); }
-        .card-title { font-weight:600; font-size:0.85rem; color:rgba(255,255,255,0.8); }
-        .card-body { flex:1; position:relative; display:flex; flex-direction:column; min-height:0; }
+        .panel{display:flex;flex-direction:column;min-height:0;overflow:hidden;background:rgba(255,255,255,0.04);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.08);box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+        .panel-left{border-radius:14px 0 0 14px;border-right:none}
+        .panel-right{border-radius:0 14px 14px 0}
+        .panel-header{padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02)}
+        .panel-title{font-weight:600;font-size:0.85rem;color:rgba(255,255,255,0.8)}
+        .panel-body{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+        .panel-footer{padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.06)}
 
-        textarea {
-            flex:1; width:100%; border:none; padding:14px; resize:none;
-            font-family:'JetBrains Mono','Fira Code','Monaco',monospace; font-size:0.82rem; line-height:1.7;
-            outline:none; background:transparent; color:#d1d5db; min-width:0;
-        }
-        textarea::placeholder { color:rgba(255,255,255,0.12); }
-        .log-area { color:#a5b4fc; }
+        textarea{flex:1;width:100%;border:none;padding:14px;resize:none;font-family:'JetBrains Mono','Fira Code','Monaco',monospace;font-size:0.82rem;line-height:1.7;outline:none;background:transparent;color:#d1d5db;min-width:0}
+        textarea::placeholder{color:rgba(255,255,255,0.12)}
+        .log-area{color:#a5b4fc}
 
-        .card-footer { padding:10px 16px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.06); }
-        .footer-btns { display:flex; gap:6px; }
+        .console-bar{grid-column:1/-1;margin-top:12px;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.06);border-radius:12px;height:140px;display:flex;flex-direction:column;overflow:hidden}
+        .console-header{padding:8px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.05)}
+        .console-title{font-size:0.75rem;font-weight:600;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px}
+        .console-body{flex:1;overflow-y:auto;padding:8px 14px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;line-height:1.8;color:#6ee7b7;min-height:0}
+        .console-body .log-line{opacity:0;animation:logIn 0.3s ease forwards}
+        .console-body .log-error{color:#f87171}
 
-        /* 日志控制台 */
-        .console-bar {
-            background:rgba(0,0,0,0.3); backdrop-filter:blur(20px);
-            border:1px solid rgba(255,255,255,0.06); border-radius:12px;
-            height:160px; display:flex; flex-direction:column; overflow:hidden; flex-shrink:0;
-        }
-        .console-header { padding:8px 14px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); }
-        .console-title { font-size:0.75rem; font-weight:600; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; }
-        .console-body { flex:1; overflow-y:auto; padding:8px 14px; font-family:'JetBrains Mono',monospace; font-size:0.78rem; line-height:1.8; color:#6ee7b7; min-height:0; }
-        .console-body .log-line { opacity:0; animation:logIn 0.3s ease forwards; }
-        .console-body .log-error { color:#f87171; }
+        .btn{display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;border-radius:8px;font-weight:500;font-size:0.82rem;cursor:pointer;transition:all 0.3s;border:none;gap:5px}
+        .btn-primary{background:linear-gradient(135deg,#7c3aed,#6366f1);color:white;box-shadow:0 4px 15px rgba(99,102,241,0.3)}
+        .btn-primary:hover{box-shadow:0 6px 25px rgba(99,102,241,0.45);transform:translateY(-1px)}
+        .btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
+        .btn-secondary{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6)}
+        .btn-secondary:hover{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.85)}
+        .btn-sm{padding:4px 10px;font-size:0.75rem;border-radius:7px}
+        .btn-ghost{background:transparent;color:rgba(255,255,255,0.3);padding:6px 10px}
+        .btn-ghost:hover{color:#f87171;background:rgba(248,113,113,0.1)}
+        .btn-success{background:linear-gradient(135deg,#059669,#10b981);color:white;box-shadow:0 4px 15px rgba(16,185,129,0.25)}
+        .btn-success:hover{box-shadow:0 6px 25px rgba(16,185,129,0.4);transform:translateY(-1px)}
 
-        .btn { display:inline-flex; align-items:center; justify-content:center; padding:8px 16px; border-radius:8px; font-weight:500; font-size:0.82rem; cursor:pointer; transition:all 0.3s; border:none; gap:5px; }
-        .btn-primary { background:linear-gradient(135deg,#7c3aed,#6366f1); color:white; box-shadow:0 4px 15px rgba(99,102,241,0.3); }
-        .btn-primary:hover { box-shadow:0 6px 25px rgba(99,102,241,0.45); transform:translateY(-1px); }
-        .btn-primary:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
-        .btn-secondary { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.6); }
-        .btn-secondary:hover { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.85); }
-        .btn-sm { padding:4px 10px; font-size:0.75rem; border-radius:7px; }
-        .btn-ghost { background:transparent; color:rgba(255,255,255,0.3); padding:6px 10px; }
-        .btn-ghost:hover { color:#f87171; background:rgba(248,113,113,0.1); }
-        .btn-success { background:linear-gradient(135deg,#059669,#10b981); color:white; box-shadow:0 4px 15px rgba(16,185,129,0.25); }
-        .btn-success:hover { box-shadow:0 6px 25px rgba(16,185,129,0.4); transform:translateY(-1px); }
+        .badge{padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.45);border:1px solid rgba(255,255,255,0.08)}
+        .badge-success{background:rgba(16,185,129,0.12);color:#6ee7b7;border-color:rgba(16,185,129,0.2)}
+        .footer-btns{display:flex;gap:6px}
 
-        .badge { padding:3px 10px; border-radius:20px; font-size:0.7rem; font-weight:600; background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.45); border:1px solid rgba(255,255,255,0.08); }
-        .badge-success { background:rgba(16,185,129,0.12); color:#6ee7b7; border-color:rgba(16,185,129,0.2); }
-        .badge-info { background:rgba(99,102,241,0.12); color:#a5b4fc; border-color:rgba(99,102,241,0.2); }
+        .progress-container{position:absolute;top:0;left:0;right:0;height:2px;z-index:10}
+        .progress-bar{height:100%;width:0;transition:width 0.3s ease;background:linear-gradient(90deg,#7c3aed,#06b6d4);box-shadow:0 0 12px rgba(124,58,237,0.5)}
 
-        .progress-container { position:absolute; top:0; left:0; right:0; height:2px; z-index:10; }
-        .progress-bar { height:100%; width:0; transition:width 0.3s ease; background:linear-gradient(90deg,#7c3aed,#06b6d4); box-shadow:0 0 12px rgba(124,58,237,0.5); }
+        #toast{display:none;position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 28px;border-radius:12px;background:rgba(30,27,75,0.9);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;font-size:0.88rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.3);transition:opacity 0.3s,transform 0.3s}
+        #pwdModal{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);align-items:center;justify-content:center}
+        .modal-card{background:rgba(30,27,75,0.95);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px;width:340px;box-shadow:0 16px 64px rgba(0,0,0,0.4)}
+        .modal-card .title{font-size:1rem;font-weight:600;color:#c4b5fd;margin-bottom:20px}
+        .modal-card input{width:100%;padding:10px 14px;margin-bottom:10px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.04);color:#e0e0e0;font-size:0.9rem;outline:none}
 
-        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes logIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
-        ::-webkit-scrollbar { width:4px; }
-        ::-webkit-scrollbar-track { background:transparent; }
-        ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:4px; }
+        @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes logIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
     </style>
 </head>
 <body>
@@ -103,233 +84,198 @@
             <svg width="24" height="24" viewBox="0 0 64 64" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs><circle cx="32" cy="24" r="10" stroke="url(#lg)" stroke-width="4"/><rect x="28" y="34" width="8" height="20" rx="4" fill="url(#lg)"/><circle cx="20" cy="50" r="5" stroke="url(#lg)" stroke-width="3" fill="none"/><circle cx="44" cy="44" r="5" stroke="url(#lg)" stroke-width="3" fill="none"/></svg>
             AWS Key Manager
         </div>
-        <div style="display:flex;align-items:center;gap:12px;">
+        <div class="nav-right">
             <div class="proxy-bar">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                 <input type="text" id="globalProxy" class="proxy-input" placeholder="SOCKS5 代理地址">
                 <span class="proxy-mode-label" id="proxyModeLabel">直连模式</span>
                 <button class="btn btn-secondary btn-sm" onclick="checkProxy()">检测</button>
                 <button class="btn btn-secondary btn-sm" onclick="saveProxy()" title="保存到浏览器">💾</button>
-                <span id="proxyStatus" style="font-size:0.75rem;font-weight:500;min-width:70px;text-align:center;"></span>
+                <span id="proxyStatus" style="font-size:0.75rem;font-weight:500;min-width:70px;text-align:center"></span>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="showPwdModal()" title="修改密码">🔒</button>
         </div>
     </nav>
-    <div class="main-container">
-        <div class="tab-nav">
-            <div class="tab-btn active" onclick="switchTab('rotate')">🔄 密钥轮换</div>
-            <div class="tab-btn" onclick="switchTab('verify')">✅ 密钥验证</div>
-            <div class="tab-btn" onclick="switchTab('quota')">📊 配额查询</div>
-        </div>
 
-        <!-- 轮换 -->
-        <div id="tab-rotate" class="workspace active">
-            <div class="panels">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">旧密钥列表</span><span class="badge" id="rotateLines">0 行</span></div>
-                    <div class="card-body"><textarea id="rotateInput" placeholder="在此粘贴密钥列表...&#10;&#10;支持格式：&#10;user@example.com AKIA... SECRET...&#10;备注 AKIA... SECRET..."></textarea></div>
-                    <div class="card-footer"><button class="btn btn-ghost" onclick="clearInput('rotate')">清空</button><button class="btn btn-primary" id="rotateBtn" onclick="startTask('rotate')">开始轮换</button></div>
-                </div>
-                <div class="card">
-                    <div class="progress-container"><div id="rotateProgress" class="progress-bar"></div></div>
-                    <div class="card-header"><span class="card-title">新密钥结果</span><span class="badge badge-success" id="rotateCount">成功: 0</span></div>
-                    <div class="card-body"><textarea id="rotateOutput" class="log-area" readonly placeholder="等待任务开始..."></textarea></div>
-                    <div class="card-footer">
-                        <div class="footer-btns"><button class="btn btn-secondary" onclick="downloadOutput('rotateOutput','new_keys.txt')">导出 TXT</button><button class="btn btn-secondary" onclick="downloadCSV('rotate')">导出 CSV</button></div>
-                        <button class="btn btn-success" onclick="copyOutput('rotateOutput')">一键复制</button>
-                    </div>
-                </div>
+    <div class="main">
+        <div class="toolbar">
+            <div class="tab-nav">
+                <div class="tab-btn active" data-mode="rotate" onclick="switchMode('rotate')">🔄 密钥轮换</div>
+                <div class="tab-btn" data-mode="verify" onclick="switchMode('verify')">✅ 密钥验证</div>
+                <div class="tab-btn" data-mode="quota" onclick="switchMode('quota')">📊 配额查询</div>
             </div>
-            <div class="console-bar">
-                <div class="console-header"><span class="console-title">📋 操作日志</span><button class="btn btn-ghost btn-sm" onclick="clearConsole('rotate')">清空</button></div>
-                <div class="console-body" id="rotateConsole"></div>
+            <div class="toolbar-info">
+                <span class="badge" id="lineCount">0 行</span>
+                <span class="badge badge-success" id="resultCount">完成: 0</span>
             </div>
         </div>
 
-        <!-- 验证 -->
-        <div id="tab-verify" class="workspace">
-            <div class="panels">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">待验证列表</span><span class="badge" id="verifyLines">0 行</span></div>
-                    <div class="card-body"><textarea id="verifyInput" placeholder="在此粘贴需要验证的密钥列表..."></textarea></div>
-                    <div class="card-footer"><button class="btn btn-ghost" onclick="clearInput('verify')">清空</button><button class="btn btn-primary" id="verifyBtn" onclick="startTask('verify')">开始验证</button></div>
-                </div>
-                <div class="card">
-                    <div class="progress-container"><div id="verifyProgress" class="progress-bar"></div></div>
-                    <div class="card-header"><span class="card-title">验证报告</span><span class="badge badge-info" id="verifyCount">有效: 0</span></div>
-                    <div class="card-body"><textarea id="verifyOutput" class="log-area" readonly placeholder="等待任务开始..."></textarea></div>
-                    <div class="card-footer">
-                        <div class="footer-btns"><button class="btn btn-secondary" onclick="downloadOutput('verifyOutput','valid_keys.txt')">导出 TXT</button><button class="btn btn-secondary" onclick="downloadCSV('verify')">导出 CSV</button></div>
-                        <button class="btn btn-success" onclick="copyOutput('verifyOutput')">一键复制</button>
-                    </div>
-                </div>
+        <!-- 左：输入 -->
+        <div class="panel panel-left">
+            <div class="panel-header">
+                <span class="panel-title" id="inputTitle">旧密钥列表</span>
             </div>
-            <div class="console-bar">
-                <div class="console-header"><span class="console-title">📋 操作日志</span><button class="btn btn-ghost btn-sm" onclick="clearConsole('verify')">清空</button></div>
-                <div class="console-body" id="verifyConsole"></div>
+            <div class="panel-body">
+                <textarea id="mainInput" placeholder="在此粘贴密钥列表..."></textarea>
             </div>
+            <div class="panel-footer">
+                <button class="btn btn-ghost" onclick="document.getElementById('mainInput').value='';updateCount()">清空</button>
+                <button class="btn btn-primary" id="startBtn" onclick="startTask()">开始轮换</button>
+            </div>
+        </div>
+
+        <!-- 右：输出 -->
+        <div class="panel panel-right">
+            <div class="progress-container"><div id="progressBar" class="progress-bar"></div></div>
+            <div class="panel-header">
+                <span class="panel-title" id="outputTitle">新密钥结果</span>
+            </div>
+            <div class="panel-body">
+                <textarea id="mainOutput" class="log-area" readonly placeholder="等待任务开始..."></textarea>
+            </div>
+            <div class="panel-footer">
+                <div class="footer-btns">
+                    <button class="btn btn-secondary" onclick="downloadTxt()">导出 TXT</button>
+                    <button class="btn btn-secondary" onclick="downloadCSV()">导出 CSV</button>
+                </div>
+                <button class="btn btn-success" onclick="copyOutput()">一键复制</button>
+            </div>
+        </div>
+
+        <!-- 底部日志 -->
+        <div class="console-bar">
+            <div class="console-header">
+                <span class="console-title">📋 操作日志</span>
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('consoleLog').innerHTML=''">清空</button>
+            </div>
+            <div class="console-body" id="consoleLog"></div>
         </div>
     </div>
-        <!-- 配额查询 -->
-        <div id="tab-quota" class="workspace">
-            <div class="panels">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">密钥列表</span><span class="badge" id="quotaLines">0 行</span></div>
-                    <div class="card-body"><textarea id="quotaInput" placeholder="在此粘贴密钥列表...&#10;查询 us-east-1 On-Demand vCPUs 配额"></textarea></div>
-                    <div class="card-footer"><button class="btn btn-ghost" onclick="clearInput('quota')">清空</button><button class="btn btn-primary" id="quotaBtn" onclick="startTask('quota')">开始查询</button></div>
-                </div>
-                <div class="card">
-                    <div class="progress-container"><div id="quotaProgress" class="progress-bar"></div></div>
-                    <div class="card-header"><span class="card-title">配额结果 (us-east-1)</span><span class="badge badge-info" id="quotaCount">完成: 0</span></div>
-                    <div class="card-body"><textarea id="quotaOutput" class="log-area" readonly placeholder="等待查询..."></textarea></div>
-                    <div class="card-footer">
-                        <div class="footer-btns"><button class="btn btn-secondary" onclick="downloadOutput('quotaOutput','quota_result.txt')">导出 TXT</button><button class="btn btn-secondary" onclick="downloadCSV('quota')">导出 CSV</button></div>
-                        <button class="btn btn-success" onclick="copyOutput('quotaOutput')">一键复制</button>
-                    </div>
-                </div>
-            </div>
-            <div class="console-bar">
-                <div class="console-header"><span class="console-title">📋 操作日志</span><button class="btn btn-ghost btn-sm" onclick="clearConsole('quota')">清空</button></div>
-                <div class="console-body" id="quotaConsole"></div>
-            </div>
-        </div>
 
-    <!-- Toast 提示 -->
-    <div id="toast" style="display:none;position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 28px;border-radius:12px;background:rgba(30,27,75,0.9);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;font-size:0.88rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.3);transition:opacity 0.3s,transform 0.3s;"></div>
-
-    <!-- 修改密码弹窗 -->
-    <div id="pwdModal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
-        <div style="background:rgba(30,27,75,0.95);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px;width:340px;box-shadow:0 16px 64px rgba(0,0,0,0.4);">
-            <div style="font-size:1rem;font-weight:600;color:#c4b5fd;margin-bottom:20px;">🔒 修改密码</div>
-            <input type="password" id="oldPwd" placeholder="当前密码" style="width:100%;padding:10px 14px;margin-bottom:10px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.04);color:#e0e0e0;font-size:0.9rem;outline:none;">
-            <input type="password" id="newPwd" placeholder="新密码" style="width:100%;padding:10px 14px;margin-bottom:10px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.04);color:#e0e0e0;font-size:0.9rem;outline:none;">
-            <input type="password" id="newPwd2" placeholder="确认新密码" style="width:100%;padding:10px 14px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:rgba(255,255,255,0.04);color:#e0e0e0;font-size:0.9rem;outline:none;">
-            <div id="pwdMsg" style="font-size:0.8rem;min-height:20px;margin-bottom:12px;"></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;">
+    <div id="toast"></div>
+    <div id="pwdModal">
+        <div class="modal-card">
+            <div class="title">🔒 修改密码</div>
+            <input type="password" id="oldPwd" placeholder="当前密码">
+            <input type="password" id="newPwd" placeholder="新密码">
+            <input type="password" id="newPwd2" placeholder="确认新密码">
+            <div id="pwdMsg" style="font-size:0.8rem;min-height:20px;margin-bottom:12px"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
                 <button class="btn btn-secondary" onclick="hidePwdModal()">取消</button>
                 <button class="btn btn-primary" onclick="changePwd()">确认</button>
             </div>
         </div>
     </div>
+
 <script>
-    let proxyIndex=0, rotateResults=[], verifyResults=[], quotaResults=[];
+    let currentMode='rotate', proxyIndex=0, taskResults=[];
 
-    // 页面加载时恢复代理
-    (function(){const saved=localStorage.getItem('akm_proxy');if(saved){document.getElementById('globalProxy').value=saved;updateProxyLabel();}})();
-    function saveProxy(){localStorage.setItem('akm_proxy',document.getElementById('globalProxy').value);showToast('✅ 代理已保存');}
+    const modeConfig={
+        rotate:{inputTitle:'旧密钥列表',outputTitle:'新密钥结果',btnText:'开始轮换',api:'/api/rotate',placeholder:'在此粘贴密钥列表...\n\n支持格式：\nuser@example.com AKIA... SECRET...\n备注 AKIA... SECRET...'},
+        verify:{inputTitle:'待验证列表',outputTitle:'验证报告',btnText:'开始验证',api:'/api/verify',placeholder:'在此粘贴需要验证的密钥列表...'},
+        quota:{inputTitle:'密钥列表',outputTitle:'配额结果 (us-east-1)',btnText:'开始查询',api:'/api/quota',placeholder:'在此粘贴密钥列表...\n查询 us-east-1 On-Demand vCPUs 配额'}
+    };
 
-    function showToast(msg,duration=2000){
-        const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
-        setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(-10px)';setTimeout(()=>t.style.display='none',300);},duration);
+    function switchMode(mode){
+        currentMode=mode;
+        const c=modeConfig[mode];
+        document.getElementById('inputTitle').textContent=c.inputTitle;
+        document.getElementById('outputTitle').textContent=c.outputTitle;
+        document.getElementById('startBtn').textContent=c.btnText;
+        document.getElementById('mainInput').placeholder=c.placeholder;
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
     }
 
-    function showPwdModal(){document.getElementById('pwdModal').style.display='flex';document.getElementById('oldPwd').focus();}
-    function hidePwdModal(){document.getElementById('pwdModal').style.display='none';['oldPwd','newPwd','newPwd2'].forEach(id=>document.getElementById(id).value='');document.getElementById('pwdMsg').textContent='';}
-    async function changePwd(){
-        const o=document.getElementById('oldPwd').value,n=document.getElementById('newPwd').value,n2=document.getElementById('newPwd2').value,msg=document.getElementById('pwdMsg');
-        if(n!==n2){msg.textContent='两次密码不一致';msg.style.color='#f87171';return;}
-        try{
-            const r=await fetch('/api/change_password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({old_password:o,new_password:n})}).then(r=>r.json());
-            if(r.success){hidePwdModal();showToast('✅ '+r.msg);}
-            else{msg.textContent=r.msg;msg.style.color='#f87171';}
-        }catch(e){msg.textContent='网络错误';msg.style.color='#f87171';}
-    }
-
+    // 代理
+    (function(){const s=localStorage.getItem('akm_proxy');if(s){document.getElementById('globalProxy').value=s;updateProxyLabel();}})();
     function getProxies(){const r=document.getElementById('globalProxy').value.trim();return r?r.split(',').map(p=>p.trim()).filter(Boolean):[];}
     function getNextProxy(){const p=getProxies();if(!p.length)return'';return p[proxyIndex++%p.length];}
     function updateProxyLabel(){const p=getProxies(),l=document.getElementById('proxyModeLabel');l.textContent=p.length===0?'直连模式':p.length===1?'单代理':p.length+' 个代理轮换';}
     document.getElementById('globalProxy').addEventListener('input',updateProxyLabel);
+    function saveProxy(){localStorage.setItem('akm_proxy',document.getElementById('globalProxy').value);showToast('✅ 代理已保存');}
 
-    function switchTab(name){
-        document.querySelectorAll('.workspace').forEach(e=>e.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
-        document.getElementById('tab-'+name).classList.add('active');
-        const idx={rotate:0,verify:1,quota:2};
-        document.querySelectorAll('.tab-btn')[idx[name]].classList.add('active');
+    function updateCount(){
+        const lines=document.getElementById('mainInput').value.trim().split('\n').filter(l=>l.trim());
+        document.getElementById('lineCount').textContent=lines.length+' 行';
     }
-    ['rotate','verify','quota'].forEach(t=>{
-        document.getElementById(t+'Input').addEventListener('input',function(){
-            document.getElementById(t+'Lines').textContent=this.value.trim().split('\n').filter(l=>l.trim()).length+' 行';
-        });
-    });
-    function clearInput(t){document.getElementById(t+'Input').value='';document.getElementById(t+'Lines').textContent='0 行';}
-    function clearConsole(t){document.getElementById(t+'Console').innerHTML='';}
+    document.getElementById('mainInput').addEventListener('input',updateCount);
 
-    function appendLog(type, msg, isError) {
-        const el = document.getElementById(type+'Console');
-        const line = document.createElement('div');
-        line.className = 'log-line' + (isError ? ' log-error' : '');
-        line.textContent = msg;
-        el.appendChild(line);
-        el.scrollTop = el.scrollHeight;
+    function appendLog(msg,isError){
+        const el=document.getElementById('consoleLog'),d=document.createElement('div');
+        d.className='log-line'+(isError?' log-error':'');d.textContent=msg;el.appendChild(d);el.scrollTop=el.scrollHeight;
     }
 
     async function checkProxy(){
         const p=getProxies(),s=document.getElementById('proxyStatus');
         if(!p.length){s.textContent='直连';s.style.color='rgba(255,255,255,0.3)';return;}
         s.textContent='检测中...';s.style.color='rgba(255,255,255,0.4)';
-        try{
-            const r=await fetch('/api/check_proxy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proxy:p[0]})}).then(r=>r.json());
+        try{const r=await fetch('/api/check_proxy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proxy:p[0]})}).then(r=>r.json());
             if(r.success){s.textContent='✅ '+r.ip;s.style.color='#6ee7b7';}else{s.textContent='❌ 失败';s.style.color='#f87171';}
         }catch(e){s.textContent='❌ 错误';s.style.color='#f87171';}
     }
 
-    async function startTask(type){
-        const input=document.getElementById(type+'Input'),output=document.getElementById(type+'Output'),
-              progress=document.getElementById(type+'Progress'),count=document.getElementById(type+'Count'),
-              btn=document.getElementById(type+'Btn');
+    async function startTask(){
+        const input=document.getElementById('mainInput'),output=document.getElementById('mainOutput'),
+              progress=document.getElementById('progressBar'),count=document.getElementById('resultCount'),
+              btn=document.getElementById('startBtn');
         const lines=input.value.trim().split('\n').filter(l=>l.trim());
         if(!lines.length){showToast('⚠️ 请先输入内容');return;}
-        output.value='';progress.style.width='0%';clearConsole(type);
-        if(type==='rotate')rotateResults=[];else if(type==='verify')verifyResults=[];else quotaResults=[];
-        proxyIndex=0;btn.disabled=true;btn.textContent='处理中...';
-        let ok=0;const apiMap={rotate:'/api/rotate',verify:'/api/verify',quota:'/api/quota'};const api=apiMap[type];
-
-        appendLog(type, `🚀 开始${type==='rotate'?'轮换':type==='verify'?'验证':'配额查询'}，共 ${lines.length} 条`);
+        output.value='';progress.style.width='0%';taskResults=[];proxyIndex=0;
+        document.getElementById('consoleLog').innerHTML='';
+        btn.disabled=true;btn.textContent='处理中...';
+        let ok=0;const api=modeConfig[currentMode].api;
+        appendLog(`🚀 开始${modeConfig[currentMode].btnText.replace('开始','')}，共 ${lines.length} 条`);
 
         for(let i=0;i<lines.length;i++){
             progress.style.width=((i+1)/lines.length*100)+'%';
-            appendLog(type, `\n━━━ [${i+1}/${lines.length}] ━━━`);
+            appendLog(`\n━━━ [${i+1}/${lines.length}] ━━━`);
             try{
                 const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proxy:getNextProxy(),line:lines[i]})}).then(r=>r.json());
-
-                if(r.logs){r.logs.forEach(l=>appendLog(type,l,l.includes('❌')));}
-
+                if(r.logs)r.logs.forEach(l=>appendLog(l,l.includes('❌')));
                 if(r.success){ok++;
-                    if(type==='rotate'){
+                    if(currentMode==='rotate'){
                         output.value+=r.output_line+'\n';
-                        rotateResults.push({remark:r.remark,ak:r.new_ak,sk:r.new_sk,msg:r.msg});
-                    }else if(type==='verify'){
+                        taskResults.push({remark:r.remark,ak:r.new_ak,sk:r.new_sk,msg:r.msg});
+                    }else if(currentMode==='verify'){
                         output.value+=`${r.remark} | ${r.ak} | ${r.sk} | ${r.msg}\n`;
-                        verifyResults.push({remark:r.remark,ak:r.ak,sk:r.sk,arn:r.arn||'',msg:r.msg});
+                        taskResults.push({remark:r.remark,ak:r.ak,sk:r.sk,arn:r.arn||'',msg:r.msg});
                     }else{
                         output.value+=`${r.remark} | ${r.ak} | ${r.sk} | ${r.vcpus}V\n`;
-                        quotaResults.push({remark:r.remark,ak:r.ak,sk:r.sk,vcpus:r.vcpus});
+                        taskResults.push({remark:r.remark,ak:r.ak,sk:r.sk,vcpus:r.vcpus});
                     }
                 }else{
                     output.value+=`[失败] ${lines[i].substring(0,30)}... | ${r.msg}\n`;
-                    if(!r.logs) appendLog(type,`❌ ${r.msg}`,true);
+                    if(!r.logs)appendLog(`❌ ${r.msg}`,true);
                 }
-            }catch(e){output.value+=`[错误] ${e.message}\n`;appendLog(type,`❌ 网络错误: ${e.message}`,true);}
+            }catch(e){output.value+=`[错误] ${e.message}\n`;appendLog(`❌ 网络错误: ${e.message}`,true);}
             output.scrollTop=output.scrollHeight;
-            count.textContent=`${type==='rotate'?'成功':type==='verify'?'有效':'完成'}: ${ok}/${lines.length}`;
+            const label={rotate:'成功',verify:'有效',quota:'完成'};
+            count.textContent=`${label[currentMode]}: ${ok}/${lines.length}`;
         }
-        appendLog(type,`\n🏁 任务完成！成功 ${ok}/${lines.length}`);
-        btn.disabled=false;btn.textContent=type==='rotate'?'开始轮换':type==='verify'?'开始验证':'开始查询';
+        appendLog(`\n🏁 任务完成！成功 ${ok}/${lines.length}`);
+        btn.disabled=false;btn.textContent=modeConfig[currentMode].btnText;
     }
 
-    function copyOutput(id){document.getElementById(id).select();document.execCommand('copy');showToast('✅ 已复制到剪贴板');}
-    function downloadOutput(id,fn){const b=new Blob([document.getElementById(id).value],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;a.click();}
-    function downloadCSV(type){
-        const rMap={rotate:rotateResults,verify:verifyResults,quota:quotaResults};
-        const r=rMap[type];
-        if(!r.length){showToast('⚠️ 没有数据');return;}
+    function copyOutput(){document.getElementById('mainOutput').select();document.execCommand('copy');showToast('✅ 已复制到剪贴板');}
+    function downloadTxt(){const b=new Blob([document.getElementById('mainOutput').value],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=currentMode+'_result.txt';a.click();}
+    function downloadCSV(){
+        if(!taskResults.length){showToast('⚠️ 没有数据');return;}
         let c;
-        if(type==='rotate'){c='Remark,AccessKeyId,SecretAccessKey,Status\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.msg}"\n`;});}
-        else if(type==='verify'){c='Remark,AccessKeyId,SecretAccessKey,ARN,Status\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.arn}","${x.msg}"\n`;});}
-        else{c='Remark,AccessKeyId,SecretAccessKey,vCPUs\n';r.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.vcpus}"\n`;});}
-        const fn={rotate:'new_keys.csv',verify:'valid_keys.csv',quota:'quota_result.csv'};
-        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download=fn[type];a.click();
+        if(currentMode==='rotate'){c='Remark,AccessKeyId,SecretAccessKey,Status\n';taskResults.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.msg}"\n`;});}
+        else if(currentMode==='verify'){c='Remark,AccessKeyId,SecretAccessKey,ARN,Status\n';taskResults.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.arn}","${x.msg}"\n`;});}
+        else{c='Remark,AccessKeyId,SecretAccessKey,vCPUs\n';taskResults.forEach(x=>{c+=`"${x.remark}","${x.ak}","${x.sk}","${x.vcpus}"\n`;});}
+        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download=currentMode+'_result.csv';a.click();
+    }
+
+    function showToast(msg,d=2000){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(-10px)';setTimeout(()=>t.style.display='none',300);},d);}
+    function showPwdModal(){document.getElementById('pwdModal').style.display='flex';document.getElementById('oldPwd').focus();}
+    function hidePwdModal(){document.getElementById('pwdModal').style.display='none';['oldPwd','newPwd','newPwd2'].forEach(id=>document.getElementById(id).value='');document.getElementById('pwdMsg').textContent='';}
+    async function changePwd(){
+        const o=document.getElementById('oldPwd').value,n=document.getElementById('newPwd').value,n2=document.getElementById('newPwd2').value,msg=document.getElementById('pwdMsg');
+        if(n!==n2){msg.textContent='两次密码不一致';msg.style.color='#f87171';return;}
+        try{const r=await fetch('/api/change_password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({old_password:o,new_password:n})}).then(r=>r.json());
+            if(r.success){hidePwdModal();showToast('✅ '+r.msg);}else{msg.textContent=r.msg;msg.style.color='#f87171';}
+        }catch(e){msg.textContent='网络错误';msg.style.color='#f87171';}
     }
 </script>
 </body>
