@@ -421,7 +421,7 @@ def api_quota():
 
         return jsonify({
             "success": True, "logs": qlogs,
-            "msg": f"{vcpus}V", "remark": remark, "ak": ak, "vcpus": vcpus,
+            "msg": f"{vcpus}V", "remark": remark, "ak": ak, "sk": sk, "vcpus": vcpus,
         })
     except Exception as e:
         qlogs.append(f"❌ 查询失败: {e}")
