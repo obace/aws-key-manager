@@ -36,7 +36,7 @@
         .workspace { display:none; flex-direction:column; gap:12px; height:calc(100vh - 145px); animation:fadeIn 0.4s ease; }
         .workspace.active { display:flex; }
         .panels { display:grid; grid-template-columns:1fr 1fr; gap:16px; flex:1; min-height:0; }
-        .panels > .card { min-width:0; }
+        .panels > .card { min-width:0; overflow:hidden; }
 
         .card {
             display:flex; flex-direction:column; overflow:hidden;
@@ -51,7 +51,7 @@
         textarea {
             flex:1; width:100%; border:none; padding:14px; resize:none;
             font-family:'JetBrains Mono','Fira Code','Monaco',monospace; font-size:0.82rem; line-height:1.7;
-            outline:none; background:transparent; color:#d1d5db;
+            outline:none; background:transparent; color:#d1d5db; min-width:0;
         }
         textarea::placeholder { color:rgba(255,255,255,0.12); }
         .log-area { color:#a5b4fc; }
