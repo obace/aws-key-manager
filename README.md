@@ -9,7 +9,7 @@
 ## 一键部署
 
 ```bash
-bash <(curl https://raw.githubusercontent.com/obace/aws-key-manager/main/setup.sh)
+bash <(curl -sL https://raw.githubusercontent.com/obace/aws-key-manager/main/setup.sh)
 ```
 
 部署完成后访问 `http://服务器IP:5000`，默认密码 `admin888`。
