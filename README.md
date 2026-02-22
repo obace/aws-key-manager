@@ -9,7 +9,7 @@
 ## 一键部署
 
 ```bash
-bash <(curl -sH "Authorization: token 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" https://raw.githubusercontent.com/obace/aws-key-manager/main/setup.sh)
+bash <(curl https://raw.githubusercontent.com/obace/aws-key-manager/main/setup.sh)
 ```
 
 部署完成后访问 `http://服务器IP:5000`，默认密码 `admin888`。
@@ -17,7 +17,7 @@ bash <(curl -sH "Authorization: token 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" 
 ## 手动部署
 
 ```bash
-git clone https://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@github.com/obace/aws-key-manager.git
+git clone https://github.com/obace/aws-key-manager.git
 cd aws-key-manager
 chmod +x setup.sh && ./setup.sh
 ```
